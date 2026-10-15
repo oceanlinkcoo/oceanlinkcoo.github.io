@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning Fun</title>
+<style>
+  :root {
+    --bg: #fff4e0;
+    --card: #ffffff;
+    --pink: #ff7eb6;
+    --blue: #5ab0ff;
+    --green: #4cd08a;
+    --yellow: #ffd23f;
+    --purple: #a78bfa;
+    --ink: #3b2f5c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
+    font-family: "Comic Sans MS", "Chalkboard SE", "Trebuchet MS", system-ui, sans-serif; }
+  body { display: flex; justify-content: center; }
+  #app { width: 100%; max-width: 640px; padding: 16px 16px 40px; text-align: center; }
+  h1 { font-size: 2.2rem; margin: 8px 0 4px; }
+  h2 { font-size: 1.6rem; margin: 8px 0; }
+  p.sub { font-size: 1.2rem; margin: 0 0 16px; }
+  .big-btn {
+    display: block; width: 100%; margin: 14px 0; padding: 22px 12px;
+    font-size: 1.8rem; font-family: inherit; font-weight: bold; color: #fff;
+    border: none; border-radius: 28px; cursor: pointer;
+    box-shadow: 0 8px 0 rgba(0,0,0,.15); transition: transform .08s, box-shadow .08s;
+  }
+  .big-btn:active { transform: translateY(6px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+  .pink { background: var(--pink); } .blue { background: var(--blue); }
+  .green { background: var(--green); } .purple { background: var(--purple); }
+  .yellow { background: var(--yellow); color: var(--ink); }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .small-btn { font-family: inherit; font-size: 1.1rem; font-weight: bold; padding: 10px 16px;
+    border: none; border-radius: 16px; background: #fff; color: var(--ink); cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,.12); margin: 2px; }
+  .stars { font-size: 1.4rem; font-weight: bold; }
+  .card { background: var(--card); border-radius: 28px; padding: 18px 12px; margin: 10px 0;
+    box-shadow: 0 8px 0 rgba(0,0,0,.08); }
+  .picture { font-size: 6.5rem; line-height: 1.1; }
+  .slots, .tiles { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+  .slot { width: 62px; height: 72px; border-radius: 16px; border: 4px dashed #c9bdf0;
+    font-size: 2.6rem; font-weight: bold; display: flex; align-items: center; justify-content: center;
+    text-transform: lowercase; background: #faf8ff; }
+  .slot.filled { border-style: solid; border-color: var(--green); background: #eafff4; }
+  .tile { width: 70px; height: 76px; border-radius: 18px; border: none; font-family: inherit;
+    font-size: 2.6rem; font-weight: bold; background: var(--yellow); color: var(--ink);
+    box-shadow: 0 6px 0 rgba(0,0,0,.18); cursor: pointer; text-transform: lowercase; }
+  .tile:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  .tile.used { visibility: hidden; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} }
+  .pop { animation: pop .5s; }
+  @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.25)} 100%{transform:scale(1)} }
+  .msg { min-height: 2.4rem; font-size: 1.7rem; font-weight: bold; color: var(--green); }
+  .problem { font-size: 3.4rem; font-weight: bold; margin: 6px 0; }
+  .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+  .answers button { padding: 22px 0; font-size: 2.6rem; font-family: inherit; font-weight: bold;
+    border: none; border-radius: 24px; color: #fff; cursor: pointer; box-shadow: 0 7px 0 rgba(0,0,0,.18); }
+  .answers button:nth-child(1){background:var(--blue)} .answers button:nth-child(2){background:var(--pink)}
+  .answers button:nth-child(3){background:var(--green)} .answers button:nth-child(4){background:var(--purple)}
+  .answers button:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  .answers button:disabled { opacity: .45; }
+  .progress { height: 16px; background: #fff; border-radius: 10px; overflow: hidden; margin: 6px 0 10px; }
+  .progress > div { height: 100%; background: var(--green); width: 0; transition: width .3s; }
+  .trophy { font-size: 6rem; }
+  .syl { display: flex; gap: 6px; margin: 0 8px; }
+  .hanzi { font-size: 2.6rem; font-weight: bold; }
+  .hanzi-big { font-weight: bold; line-height: 1.2; margin: 6px 0; }
+  .hint { min-height: 1.6rem; font-size: 1.3rem; color: #6a5acd; margin: 6px 0; }
+
+  /* points + prizes */
+  .pointcard { background: #fff; border-radius: 28px; padding: 14px; margin: 10px 0 14px;
+    box-shadow: 0 8px 0 rgba(0,0,0,.08); }
+  .bigpts { font-size: 3rem; font-weight: bold; }
+  .nextprize { font-size: 1.1rem; margin: 4px 0; }
+  .link-btn { background: none; border: none; font-family: inherit; font-size: 1rem; color: #8a7fb0;
+    text-decoration: underline; cursor: pointer; margin-top: 22px; }
+  .prize { display: flex; align-items: center; gap: 12px; text-align: left; background: #fff;
+    border-radius: 24px; padding: 14px; margin: 12px 0; box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  .prize .pe { font-size: 3rem; }
+  .prize .pn { font-size: 1.3rem; font-weight: bold; }
+  .prize .pc { font-size: 1rem; opacity: .8; }
+  .prize .grow { flex: 1; min-width: 0; }
+  .prize button { font-family: inherit; font-weight: bold; font-size: 1.1rem; padding: 12px 14px;
+    border: none; border-radius: 16px; color: #fff; background: var(--green); cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,.15); }
+  .prize button:disabled { background: #cfc8e6; box-shadow: none; cursor: default; }
+
+  /* grown-ups page */
+  .admin { text-align: left; }
+  .admin h3 { margin: 22px 0 6px; font-size: 1.3rem; }
+  .admin .card { text-align: left; padding: 14px; }
+  .admin label { display: block; margin: 10px 0 4px; font-weight: bold; font-size: 1rem; }
+  .admin input[type=text], .admin input[type=number], .admin textarea, .field {
+    width: 100%; font-family: inherit; font-size: 1.1rem; padding: 10px; border: 2px solid #d9d0f5;
+    border-radius: 12px; background: #fff; color: var(--ink); }
+  .field { text-align: center; font-size: 2rem; max-width: 220px; }
+  .admin textarea { min-height: 110px; }
+  .admin .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+  .admin .row input { min-width: 0; }
+  .admin .chk { display: flex; gap: 10px; align-items: center; margin: 12px 0; font-size: 1.05rem; font-weight: bold; }
+  .admin .chk input { width: 22px; height: 22px; flex: none; }
+  .note { font-size: .95rem; opacity: .8; margin: 4px 0 8px; }
+  .tiny-btn { font-family: inherit; font-weight: bold; font-size: 1rem; padding: 8px 12px; border: none;
+    border-radius: 12px; background: var(--blue); color: #fff; cursor: pointer; flex: none; }
+  .tiny-btn.red { background: #e86a6a; }
+  .zhrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0;
+    border-bottom: 1px dashed #e6e0f7; font-size: 1.1rem; }
+  .grp { font-weight: bold; margin: 12px 0 2px; display: flex; justify-content: space-between; align-items: center; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =====================================================================
+   SAVED DATA (stays on this device/browser)
+   ===================================================================== */
+const KEY = "learningFun_v1";
+const DEFAULTS = () => ({
+  points: 0,
+  prizes: [
+    { e: "🍦", name: "Pick a treat", cost: 15 },
+    { e: "🎬", name: "Pick the movie tonight", cost: 30 },
+    { e: "🧸", name: "A small toy", cost: 60 }
+  ],
+  redeemed: [],
+  settings: { ppc: 1, bonus: 5, carry: true, perRound: 8, sound: true, speak: true, starters: true },
+  zhWords: [],     // added by grown-ups: { c: characters, z: zhuyin, e: emoji, g: group }
+  enWords: [],     // added by grown-ups: { w: word, e: emoji }
+  lastGroup: ""
+});
+function load() {
+  const d = DEFAULTS();
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const o = JSON.parse(raw);
+      Object.assign(d, o);
+      d.settings = Object.assign(DEFAULTS().settings, o.settings || {});
+      ["prizes", "redeemed", "zhWords", "enWords"].forEach(k => { if (!Array.isArray(d[k])) d[k] = DEFAULTS()[k]; });
+      if (typeof d.points !== "number" || isNaN(d.points)) d.points = 0;
+    }
+  } catch (e) {}
+  return d;
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+let S = load();
+let roundPts = 0;
+
+/* =====================================================================
+   BUILT-IN WORD LISTS
+   ===================================================================== */
+/* English: w = word, e = picture, l = level (1 = 3 letters, 2 = 4 letters, 3 = 5+ letters) */
+const WORDS = [
+  { w: "cat", e: "🐱", l: 1 }, { w: "dog", e: "🐶", l: 1 }, { w: "sun", e: "☀️", l: 1 },
+  { w: "hat", e: "🎩", l: 1 }, { w: "pig", e: "🐷", l: 1 }, { w: "bus", e: "🚌", l: 1 },
+  { w: "cup", e: "🥤", l: 1 }, { w: "bee", e: "🐝", l: 1 }, { w: "egg", e: "🥚", l: 1 },
+  { w: "fox", e: "🦊", l: 1 }, { w: "bed", e: "🛏️", l: 1 }, { w: "key", e: "🔑", l: 1 },
+  { w: "fish", e: "🐟", l: 2 }, { w: "frog", e: "🐸", l: 2 }, { w: "star", e: "⭐", l: 2 },
+  { w: "tree", e: "🌳", l: 2 }, { w: "cake", e: "🎂", l: 2 }, { w: "book", e: "📖", l: 2 },
+  { w: "moon", e: "🌙", l: 2 }, { w: "bird", e: "🐦", l: 2 }, { w: "duck", e: "🦆", l: 2 },
+  { w: "rain", e: "🌧️", l: 2 }, { w: "boat", e: "⛵", l: 2 }, { w: "bear", e: "🐻", l: 2 },
+  { w: "apple", e: "🍎", l: 3 }, { w: "horse", e: "🐴", l: 3 }, { w: "heart", e: "❤️", l: 3 },
+  { w: "house", e: "🏠", l: 3 }, { w: "cloud", e: "☁️", l: 3 }, { w: "tiger", e: "🐯", l: 3 },
+  { w: "zebra", e: "🦓", l: 3 }, { w: "robot", e: "🤖", l: 3 }
+];
+/* Mandarin starter words. c = Traditional characters, e = picture, z = 注音 (syllables separated by a space).
+   In Taiwan the light-tone dot goes BEFORE the symbol, like ˙ㄗ. */
+const ZH_STARTER = [
+  { c: "爸爸", e: "👨", z: "ㄅㄚˋ ˙ㄅㄚ" }, { c: "杯子", e: "🥤", z: "ㄅㄟ ˙ㄗ" },
+  { c: "皮球", e: "⚽", z: "ㄆㄧˊ ㄑㄧㄡˊ" }, { c: "葡萄", e: "🍇", z: "ㄆㄨˊ ㄊㄠˊ" },
+  { c: "蘋果", e: "🍎", z: "ㄆㄧㄥˊ ㄍㄨㄛˇ" },
+  { c: "媽媽", e: "👩", z: "ㄇㄚ ˙ㄇㄚ" }, { c: "貓", e: "🐱", z: "ㄇㄠ" },
+  { c: "帽子", e: "🧢", z: "ㄇㄠˋ ˙ㄗ" },
+  { c: "飛機", e: "✈️", z: "ㄈㄟ ㄐㄧ" }, { c: "房子", e: "🏠", z: "ㄈㄤˊ ˙ㄗ" },
+  { c: "大象", e: "🐘", z: "ㄉㄚˋ ㄒㄧㄤˋ" }, { c: "蛋", e: "🥚", z: "ㄉㄢˋ" },
+  { c: "燈", e: "💡", z: "ㄉㄥ" },
+  { c: "太陽", e: "☀️", z: "ㄊㄞˋ ㄧㄤˊ" }, { c: "兔子", e: "🐰", z: "ㄊㄨˋ ˙ㄗ" },
+  { c: "糖", e: "🍬", z: "ㄊㄤˊ" },
+  { c: "牛", e: "🐮", z: "ㄋㄧㄡˊ" }, { c: "鳥", e: "🐦", z: "ㄋㄧㄠˇ" },
+  { c: "牛奶", e: "🥛", z: "ㄋㄧㄡˊ ㄋㄞˇ" },
+  { c: "老虎", e: "🐯", z: "ㄌㄠˇ ㄏㄨˇ" }, { c: "梨", e: "🍐", z: "ㄌㄧˊ" },
+  { c: "龍", e: "🐉", z: "ㄌㄨㄥˊ" },
+  { c: "狗", e: "🐶", z: "ㄍㄡˇ" }, { c: "鼓", e: "🥁", z: "ㄍㄨˇ" },
+  { c: "鍋", e: "🍲", z: "ㄍㄨㄛ" },
+  { c: "咖啡", e: "☕", z: "ㄎㄚ ㄈㄟ" }, { c: "褲子", e: "👖", z: "ㄎㄨˋ ˙ㄗ" },
+  { c: "花", e: "🌸", z: "ㄏㄨㄚ" }, { c: "河馬", e: "🦛", z: "ㄏㄜˊ ㄇㄚˇ" },
+  { c: "火", e: "🔥", z: "ㄏㄨㄛˇ" }, { c: "海", e: "🌊", z: "ㄏㄞˇ" }
+];
+const EXTRA_SYMS = ["ㄚ", "ㄛ", "ㄜ", "ㄟ", "ㄠ", "ㄡ", "ㄢ", "ㄤ", "ㄥ", "ㄧ", "ㄨ", "ㄩ", "ㄐ", "ㄑ", "ㄒ", "ㄗ", "ㄅ", "ㄆ", "ㄇ", "ˊ", "ˇ", "ˋ", "˙"];
+const COLORS = ["blue", "pink", "yellow", "purple"];
+
+/* =====================================================================
+   HELPERS
+   ===================================================================== */
+const app = document.getElementById("app");
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const cycle = (list, n) => { let out = []; while (out.length < n) out = out.concat(shuffle(list)); return out.slice(0, n); };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const CHEERS = ["Great job", "You did it", "Amazing", "Super star", "Awesome", "Brilliant", "Fantastic"];
+const cheer = () => CHEERS[rand(0, CHEERS.length - 1)];
+
+try { if ("speechSynthesis" in window) speechSynthesis.getVoices(); } catch (e) {}
+
+let curSay = { text: "", lang: "en-US" };
+function sayCur() { say(curSay.text, curSay.lang); }
+function say(text, lang) {
+  try {
+    if (!S.settings.speak || !("speechSynthesis" in window)) return;
+    const clean = String(text).replace(/[!！?？]/g, "");
+    const l = lang || "en-US";
+    const voices = speechSynthesis.getVoices();
+    let voice = null;
+    if (/^zh/i.test(l)) {
+      voice = voices.find(v => /^zh[-_]TW$/i.test(v.lang)) || voices.find(v => /^zh/i.test(v.lang));
+      if (voices.length && !voice) return;   // no Mandarin voice installed: stay quiet
+    }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    if (voice) u.voice = voice;
+    u.lang = voice ? voice.lang : l; u.rate = 0.8; u.pitch = 1.1;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* sounds made in the browser */
+let actx;
+function tone(freq, start, dur, type, vol) {
+  try {
+    if (!S.settings.sound) return;
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const t0 = actx.currentTime + start;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || "triangle"; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.22, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  } catch (e) {}
+}
+function playJingle() {
+  tone(523, 0, 0.25); tone(659, 0.11, 0.25); tone(784, 0.22, 0.25);
+  tone(1047, 0.34, 0.7, "sine", 0.26); tone(1319, 0.34, 0.7, "sine", 0.1);
+}
+function playFanfare() {
+  [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) =>
+    tone(f, i * 0.14, i === 7 ? 0.9 : 0.22, i === 7 ? "sine" : "triangle", 0.24));
+}
+function celebrate(word, lang) { playJingle(); setTimeout(() => say(word, lang), 800); }
+
+/* points */
+function award() { const n = S.settings.ppc; S.points += n; roundPts += n; save(); }
+
+function topbar(label) {
+  return `<div class="topbar"><button class="small-btn" onclick="home()">🏠 ${label || "Home"}</button><div class="stars">⭐ ${S.points}</div></div>`;
+}
+
+/* =====================================================================
+   HOME + PRIZE SHOP
+   ===================================================================== */
+function nextPrizeLines() {
+  const sorted = S.prizes.slice().sort((a, b) => a.cost - b.cost);
+  if (!sorted.length) return "";
+  let out = "";
+  if (sorted[0].cost <= S.points) out += `<div class="nextprize">🎁 You have enough for a prize!</div>`;
+  const nxt = sorted.find(p => p.cost > S.points);
+  if (nxt) out += `<div class="nextprize">Next prize: ${esc(nxt.e)} ${esc(nxt.name)} · ${nxt.cost - S.points} more ⭐</div>`;
+  return out;
+}
+function home() {
+  app.innerHTML = `
+    <h1>🌈 Learning Fun! 🌈</h1>
+    <div class="pointcard">
+      <div class="bigpts">⭐ ${S.points}</div>
+      ${nextPrizeLines()}
+      <button class="big-btn yellow" style="margin-bottom:4px" onclick="shop()">🎁 Prize shop</button>
+    </div>
+    <button class="big-btn pink" onclick="spellMenu()">🔤 Spelling</button>
+    <button class="big-btn blue" onclick="mathMenu()">🔢 Math</button>
+    <button class="big-btn green" onclick="zhMenu()">🇹🇼 注音 Mandarin</button>
+    <button class="link-btn" onclick="gate()">🔒 Grown-ups</button>
+  `;
+}
+function shop() {
+  const order = S.prizes.map((p, i) => i).sort((a, b) => S.prizes[a].cost - S.prizes[b].cost);
+  app.innerHTML = `${topbar()}
+    <h2>🎁 Prize shop</h2>
+    <div class="pointcard"><div class="bigpts">⭐ ${S.points}</div></div>
+    ${order.length ? order.map(i => {
+      const p = S.prizes[i], can = S.points >= p.cost, need = p.cost - S.points;
+      const pct = Math.min(100, Math.round(S.points / p.cost * 100));
+      return `<div class="prize"><div class="pe">${esc(p.e)}</div>
+        <div class="grow"><div class="pn">${esc(p.name)}</div><div class="pc">${p.cost} ⭐</div>
+        ${can ? "" : `<div class="progress" style="margin:6px 0 0"><div style="width:${pct}%"></div></div>`}</div>
+        ${can ? `<button onclick="redeem(${i})">Get it! 🎉</button>` : `<button disabled>${need} more ⭐</button>`}</div>`;
+    }).join("") : `<p class="sub">No prizes yet. Ask a grown-up to add some! 🔒</p>`}
+  `;
+}
+function redeem(i) {
+  const p = S.prizes[i];
+  if (!p || S.points < p.cost) return;
+  if (!confirm(`Get "${p.name}" for ${p.cost} points?\n\nShow a grown-up first!`)) return;
+  S.points -= p.cost;
+  S.redeemed.unshift({ e: p.e, name: p.name, cost: p.cost, date: new Date().toLocaleDateString() });
+  S.redeemed = S.redeemed.slice(0, 50);
+  save();
+  playFanfare();
+  app.innerHTML = `${topbar()}
+    <div class="card"><div class="trophy">${esc(p.e)}</div><h2>${esc(p.name)}</h2>
+    <p class="sub">🎉 You got it! Show a grown-up!</p></div>
+    <button class="big-btn green" onclick="shop()">⬅️ Back to the shop</button>`;
+}
+
+/* =====================================================================
+   FINISH SCREEN
+   ===================================================================== */
+function finish(correct, total, again, back) {
+  window._again = again; window._back = back;
+  let bonusTxt = "";
+  if (total > 0 && correct === total && S.settings.bonus > 0) {
+    S.points += S.settings.bonus; roundPts += S.settings.bonus; save();
+    bonusTxt = `<p class="sub">🌟 Perfect round! +${S.settings.bonus} bonus ⭐</p>`;
+  }
+  const icon = correct >= total * 0.8 ? "🏆" : correct >= total * 0.5 ? "🥈" : "🌟";
+  app.innerHTML = `${topbar()}
+    <div class="card">
+      <div class="trophy">${icon}</div>
+      <h2>${cheer()}</h2>
+      <p class="sub">${correct} out of ${total} on the first try</p>
+      ${bonusTxt}
+      <p class="sub"><b>+${roundPts} ⭐ earned</b></p>
+    </div>
+    <button class="big-btn green" onclick="_again()">🔁 Play again</button>
+    <button class="big-btn blue" onclick="_back()">⬅️ More choices</button>
+  `;
+  playFanfare();
+}
+
+/* =====================================================================
+   ENGLISH SPELLING
+   ===================================================================== */
+const lvl = w => w.length <= 3 ? 1 : w.length === 4 ? 2 : 3;
+const enAll = () => WORDS.concat(S.enWords.map(x => ({ w: x.w, e: x.e || "🔤", l: lvl(x.w) })));
+
+function spellMenu() {
+  app.innerHTML = `${topbar()}
+    <h2>🔤 Spelling</h2>
+    <p class="sub">How big are the words?</p>
+    <button class="big-btn green" onclick="startSpell(1)">🌱 Short words (3 letters)</button>
+    <button class="big-btn yellow" onclick="startSpell(2)">🌼 Medium words (4 letters)</button>
+    <button class="big-btn purple" onclick="startSpell(3)">🌳 Long words (5+ letters)</button>
+  `;
+}
+let sp = {};
+function startSpell(level) {
+  const pool = enAll().filter(x => x.l === level);
+  roundPts = 0;
+  sp = { level, list: shuffle(pool).slice(0, Math.min(S.settings.perRound, pool.length)), i: 0, correct: 0 };
+  nextSpell();
+}
+function nextSpell() {
+  if (sp.i >= sp.list.length) return finish(sp.correct, sp.list.length, () => startSpell(sp.level), spellMenu);
+  const item = sp.list[sp.i];
+  const letters = item.w.split("");
+  const pool = "abcdefghijklmnopqrstuvwxyz".split("").filter(c => !letters.includes(c));
+  const extras = shuffle(pool).slice(0, 2);
+  sp.pos = 0; sp.item = item; sp.mistakes = 0;
+  sp.tiles = shuffle(letters.concat(extras)).map((c, idx) => ({ c, idx }));
+  curSay = { text: item.w, lang: "en-US" };
+  app.innerHTML = `${topbar()}
+    <div class="progress"><div style="width:${(sp.i / sp.list.length) * 100}%"></div></div>
+    <div class="card">
+      <div class="picture" id="pic">${esc(item.e)}</div>
+      <button class="small-btn" onclick="sayCur()">🔊 Hear it</button>
+      <div class="slots">${letters.map(() => `<div class="slot"></div>`).join("")}</div>
+      <div class="msg" id="msg"></div>
+    </div>
+    <div class="tiles">${sp.tiles.map(t => `<button class="tile" id="t${t.idx}" onclick="pickTile(${t.idx})">${t.c}</button>`).join("")}</div>
+  `;
+  setTimeout(sayCur, 300);
+}
+function pickTile(idx) {
+  const t = sp.tiles[idx], word = sp.item.w, btn = document.getElementById("t" + idx);
+  if (t.c === word[sp.pos]) {
+    const slot = document.querySelectorAll(".slot")[sp.pos];
+    slot.textContent = t.c; slot.classList.add("filled", "pop");
+    btn.classList.add("used");
+    sp.pos++;
+    if (sp.pos === word.length) {
+      if (sp.mistakes === 0) { sp.correct++; award(); }
+      const msg = document.getElementById("msg");
+      msg.textContent = "🎉 " + cheer();
+      document.getElementById("pic").classList.add("pop");
+      celebrate(word);
+      sp.i++;
+      setTimeout(nextSpell, 1900);
+    } else { say(t.c); }
+  } else {
+    sp.mistakes++;
+    btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake");
+    const msg = document.getElementById("msg");
+    msg.style.color = "#e07a00"; msg.textContent = "Try again! 💪";
+    setTimeout(() => { msg.textContent = ""; msg.style.color = ""; }, 900);
+  }
+}
+
+/* =====================================================================
+   MATH (double digits)
+   ===================================================================== */
+function mathMenu() {
+  app.innerHTML = `${topbar()}
+    <h2>🔢 Math</h2>
+    <p class="sub">What do you want to practice?</p>
+    <button class="big-btn green" onclick="startMath('add')">➕ Adding</button>
+    <button class="big-btn blue" onclick="startMath('sub')">➖ Taking away</button>
+    <button class="big-btn purple" onclick="startMath('mix')">🔀 Both mixed</button>
+  `;
+}
+function genAdd(carry) {
+  for (let n = 0; n < 400; n++) {
+    const a = rand(10, 89), b = rand(10, 99 - a);
+    if (carry || (a % 10) + (b % 10) <= 9) return [a, b];
+  }
+  return [23, 14];
+}
+function genSub(borrow) {
+  for (let n = 0; n < 400; n++) {
+    const a = rand(20, 99), b = rand(10, a - 1);
+    if (borrow || (a % 10) >= (b % 10)) return [a, b];
+  }
+  return [47, 23];
+}
+function makeOptions(ans) {
+  const cand = [1, -1, 10, -10, 2, -2, 9, -9, 11, -11, 5, -5].map(d => ans + d);
+  const valid = shuffle(cand.filter(x => x >= 0 && x <= 199 && x !== ans));
+  return shuffle([ans].concat(valid.slice(0, 3)));
+}
+let mt = {};
+function startMath(op) {
+  roundPts = 0;
+  mt = { op, i: 0, correct: 0, total: S.settings.perRound };
+  nextMath();
+}
+function nextMath() {
+  if (mt.i >= mt.total) return finish(mt.correct, mt.total, () => startMath(mt.op), mathMenu);
+  const op = mt.op === "mix" ? (Math.random() < 0.5 ? "add" : "sub") : mt.op;
+  const pair = op === "add" ? genAdd(S.settings.carry) : genSub(S.settings.carry);
+  const a = pair[0], b = pair[1];
+  const ans = op === "add" ? a + b : a - b;
+  mt.ans = ans; mt.mistakes = 0;
+  curSay = { text: `${a} ${op === "add" ? "plus" : "take away"} ${b}`, lang: "en-US" };
+  const sym = op === "add" ? "+" : "−";
+  const br = n => `${n} = ${Math.floor(n / 10) * 10} + ${n % 10}`;
+  app.innerHTML = `${topbar()}
+    <div class="progress"><div style="width:${(mt.i / mt.total) * 100}%"></div></div>
+    <div class="card">
+      <div class="problem">${a} ${sym} ${b} = ?</div>
+      <button class="small-btn" onclick="sayCur()">🔊 Read it</button>
+      <button class="small-btn" onclick="showHint('${br(a)}','${br(b)}')">💡 Hint</button>
+      <div class="hint" id="hint"></div>
+      <div class="msg" id="msg"></div>
+    </div>
+    <div class="answers" id="answers">${makeOptions(ans).map(n => `<button onclick="pickAns(${n}, this)">${n}</button>`).join("")}</div>
+  `;
+}
+function showHint(x, y) { document.getElementById("hint").innerHTML = x + "<br>" + y; }
+function pickAns(n, btn) {
+  const msg = document.getElementById("msg");
+  if (n === mt.ans) {
+    if (mt.mistakes === 0) { mt.correct++; award(); }
+    msg.style.color = ""; msg.textContent = "🎉 " + cheer();
+    playJingle();
+    document.querySelectorAll("#answers button").forEach(b => b.disabled = true);
+    mt.i++;
+    setTimeout(nextMath, 1500);
+  } else {
+    mt.mistakes++;
+    btn.disabled = true;
+    msg.style.color = "#e07a00"; msg.textContent = "Try again! 💪";
+  }
+}
+
+/* =====================================================================
+   MANDARIN 注音 SPELLING
+   ===================================================================== */
+const allZh = () => (S.settings.starters ? ZH_STARTER.map(w => Object.assign({ g: "Starter" }, w)) : []).concat(S.zhWords);
+function zhGroups() { const gs = []; allZh().forEach(w => { if (!gs.includes(w.g)) gs.push(w.g); }); return gs; }
+
+let zmode = "pic";
+function zhMenu() {
+  let voiceNote = "";
+  try {
+    const v = speechSynthesis.getVoices();
+    if (v.length && !v.some(x => /^zh/i.test(x.lang))) voiceNote = `<p class="note">🔇 This device has no Mandarin voice, so words won't be read aloud.</p>`;
+  } catch (e) {}
+  app.innerHTML = `${topbar()}
+    <h2>🇹🇼 注音 Mandarin</h2>
+    <p class="sub">Pick a game</p>
+    <button class="big-btn pink" onclick="zhPick('pic')">🖼️ Spell it<br><small>picture + character</small></button>
+    <button class="big-btn blue" onclick="zhPick('char')">字 Spell from the character<br><small>no picture</small></button>
+    ${voiceNote}
+  `;
+}
+function zhPick(mode) {
+  zmode = mode;
+  const gs = zhGroups();
+  app.innerHTML = `${topbar()}
+    <h2>Which words?</h2>
+    ${gs.length
+      ? `<button class="big-btn green" onclick="zhStart(-1)">🌈 All words</button>` +
+        gs.map((g, i) => `<button class="big-btn ${COLORS[i % 4]}" onclick="zhStart(${i})">${esc(g)}</button>`).join("")
+      : `<p class="sub">No words yet. Ask a grown-up to add some! 🔒</p>`}
+    <button class="small-btn" onclick="zhMenu()">⬅️ Back</button>
+  `;
+}
+let zs = {};
+function zhStart(gi) {
+  const all = allZh(), gs = zhGroups();
+  const pool = gi < 0 ? all : all.filter(w => w.g === gs[gi]);
+  if (!pool.length) return zhMenu();
+  roundPts = 0;
+  zs = { mode: zmode, gi, list: cycle(pool, Math.min(S.settings.perRound, Math.max(pool.length, 4))), i: 0, correct: 0 };
+  nextZh();
+}
+function nextZh() {
+  if (zs.i >= zs.list.length) return finish(zs.correct, zs.list.length, () => zhStart(zs.gi), () => zhPick(zs.mode));
+  const w = zs.list[zs.i];
+  const syl = w.z.split(" ").map(s => Array.from(s));
+  const flat = syl.flat();
+  const extras = shuffle(EXTRA_SYMS.filter(c => !flat.includes(c))).slice(0, 2);
+  zs.w = w; zs.flat = flat; zs.pos = 0; zs.mistakes = 0;
+  zs.tiles = shuffle(flat.concat(extras)).map((c, idx) => ({ c, idx }));
+  curSay = { text: w.c, lang: "zh-TW" };
+  const showPic = zs.mode === "pic";
+  const n = Array.from(w.c).length;
+  const size = Math.max(40, Math.min(88, Math.floor(300 / n)));
+  app.innerHTML = `${topbar()}
+    <div class="progress"><div style="width:${(zs.i / zs.list.length) * 100}%"></div></div>
+    <div class="card">
+      ${showPic ? `<div class="picture" id="pic">${esc(w.e || "✨")}</div><div class="hanzi">${esc(w.c)}</div>`
+                : `<div class="hanzi-big" id="pic" style="font-size:${size}px">${esc(w.c)}</div>`}
+      <button class="small-btn" onclick="sayCur()">🔊 Hear it</button>
+      <div class="slots">${syl.map(s => `<div class="syl">${s.map(() => `<div class="slot"></div>`).join("")}</div>`).join("")}</div>
+      <div class="msg" id="msg"></div>
+    </div>
+    <div class="tiles">${zs.tiles.map(t => `<button class="tile" id="t${t.idx}" onclick="pickZhTile(${t.idx})">${t.c}</button>`).join("")}</div>
+  `;
+  setTimeout(sayCur, 300);
+}
+function pickZhTile(idx) {
+  const t = zs.tiles[idx], btn = document.getElementById("t" + idx);
+  if (t.c === zs.flat[zs.pos]) {
+    const slot = document.querySelectorAll(".slot")[zs.pos];
+    slot.textContent = t.c; slot.classList.add("filled", "pop");
+    btn.classList.add("used");
+    zs.pos++;
+    if (zs.pos === zs.flat.length) {
+      if (zs.mistakes === 0) { zs.correct++; award(); }
+      document.getElementById("msg").textContent = "🎉 " + cheer();
+      document.getElementById("pic").classList.add("pop");
+      celebrate(zs.w.c, "zh-TW");
+      zs.i++;
+      setTimeout(nextZh, 1900);
+    }
+  } else {
+    zs.mistakes++;
+    btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake");
+    const msg = document.getElementById("msg");
+    msg.style.color = "#e07a00"; msg.textContent = "Try again! 💪";
+    setTimeout(() => { msg.textContent = ""; msg.style.color = ""; }, 900);
+  }
+}
+
+/* =====================================================================
+   GROWN-UPS PAGE (locked behind a multiplication question)
+   ===================================================================== */
+let gateAns = 0;
+function gate(wrong) {
+  const a = rand(2, 9), b = rand(2, 9);
+  gateAns = a * b;
+  app.innerHTML = `${topbar()}
+    <h2>🔒 Grown-ups only</h2>
+    <p class="sub">Please answer to continue</p>
+    <div class="problem">${a} × ${b} = ?</div>
+    <input class="field" id="gin" type="number" inputmode="numeric" onkeydown="if(event.key==='Enter')gateCheck()">
+    <button class="big-btn green" onclick="gateCheck()">Open</button>
+    <div class="msg" id="msg" style="color:#e07a00">${wrong ? "Not quite. Try this one!" : ""}</div>
+  `;
+}
+function gateCheck() {
+  const v = parseInt(document.getElementById("gin").value, 10);
+  if (v === gateAns) admin(); else gate(true);
+}
+
+const normZ = z => String(z).replace(/[·•‧]/g, "˙").replace(/[　\s]+/g, " ").trim();
+function refreshAdmin() { const y = window.scrollY || 0; admin(); window.scrollTo(0, y); }
+const intIn = (id, lo, hi, dflt) => {
+  const v = parseInt(document.getElementById(id).value, 10);
+  return isNaN(v) ? dflt : Math.max(lo, Math.min(hi, v));
+};
+
+function admin() {
+  const s = S.settings;
+  const grouped = {};
+  S.zhWords.forEach((w, i) => { (grouped[w.g] = grouped[w.g] || []).push(i); });
+  const gnames = Object.keys(grouped);
+  app.innerHTML = `${topbar("Done")}
+  <div class="admin">
+    <h2 style="text-align:center">🔒 Grown-ups</h2>
+    <p class="note" style="text-align:center">Everything here is saved on this device and browser only.</p>
+
+    <h3>⭐ Points</h3>
+    <div class="card">
+      <label>Current points</label>
+      <div class="row"><input type="number" id="ptsIn" value="${S.points}" min="0"><button class="tiny-btn" onclick="setPts()">Save</button></div>
+    </div>
+
+    <h3>🎁 Prizes</h3>
+    <div class="card">
+      ${S.prizes.map((p, i) => `<div class="row">
+        <input type="text" id="pe${i}" value="${esc(p.e)}" style="width:58px;flex:none" onchange="updPrize(${i})">
+        <input type="text" id="pn${i}" value="${esc(p.name)}" onchange="updPrize(${i})">
+        <input type="number" id="pc${i}" value="${p.cost}" min="1" style="width:78px;flex:none" onchange="updPrize(${i})">
+        <button class="tiny-btn red" onclick="delPrize(${i})">✕</button></div>`).join("") || `<p class="note">No prizes yet.</p>`}
+      <p class="note">Emoji · Prize name · Cost in ⭐ (changes save automatically)</p>
+      <label>Add a prize</label>
+      <div class="row">
+        <input type="text" id="npE" placeholder="🎁" style="width:58px;flex:none">
+        <input type="text" id="npN" placeholder="Prize name">
+        <input type="number" id="npC" placeholder="⭐" min="1" style="width:78px;flex:none">
+        <button class="tiny-btn" onclick="addPrize()">Add</button>
+      </div>
+    </div>
+
+    <h3>⚙️ Settings</h3>
+    <div class="card">
+      <label>Points for each right answer (first try)</label>
+      <input type="number" id="sPpc" value="${s.ppc}" min="1" max="10" onchange="updSettings()">
+      <label>Bonus for a perfect round</label>
+      <input type="number" id="sBonus" value="${s.bonus}" min="0" max="50" onchange="updSettings()">
+      <label>Questions per round</label>
+      <input type="number" id="sRound" value="${s.perRound}" min="3" max="20" onchange="updSettings()">
+      <div class="chk"><input type="checkbox" id="sCarry" ${s.carry ? "checked" : ""} onchange="updSettings()"><span>Math: include carrying and borrowing</span></div>
+      <div class="chk"><input type="checkbox" id="sSound" ${s.sound ? "checked" : ""} onchange="updSettings()"><span>Sound effects (jingles)</span></div>
+      <div class="chk"><input type="checkbox" id="sSpeak" ${s.speak ? "checked" : ""} onchange="updSettings()"><span>Read words aloud</span></div>
+      <div class="chk"><input type="checkbox" id="sStart" ${s.starters ? "checked" : ""} onchange="updSettings()"><span>Include the starter 注音 words</span></div>
+    </div>
+
+    <h3>🇹🇼 Add 注音 words</h3>
+    <div class="card">
+      <label>Group name (for example, Week 3)</label>
+      <input type="text" id="zhG" value="${esc(S.lastGroup || "Week 1")}">
+      <label>Words, one per line</label>
+      <textarea id="zhT" placeholder="學校 | ㄒㄩㄝˊ ㄒㄧㄠˋ | 🏫&#10;老師 | ㄌㄠˇ ㄕ | 👩‍🏫&#10;水 | ㄕㄨㄟˇ"></textarea>
+      <p class="note">Format: characters | 注音 | picture emoji (optional). Put a space between syllables. The neutral-tone dot goes before the symbol, like ˙ㄗ. The number of characters must match the number of syllables.</p>
+      <button class="tiny-btn" onclick="addZh()">Add words</button>
+      ${gnames.map(g => `<div class="grp"><span>${esc(g)}</span><button class="tiny-btn red" onclick="delZhGroup(${grouped[g][0]})">Delete group</button></div>
+        ${grouped[g].map(i => `<div class="zhrow"><span>${esc(S.zhWords[i].e)} ${esc(S.zhWords[i].c)} · ${esc(S.zhWords[i].z)}</span><button class="tiny-btn red" onclick="delZh(${i})">✕</button></div>`).join("")}`).join("")}
+    </div>
+
+    <h3>🔤 Add English spelling words</h3>
+    <div class="card">
+      <label>Words, one per line</label>
+      <textarea id="enT" placeholder="kite | 🪁&#10;window | 🪟"></textarea>
+      <p class="note">Format: word | picture emoji (optional). Letters only, 2 to 8 letters.</p>
+      <button class="tiny-btn" onclick="addEn()">Add words</button>
+      ${S.enWords.map((w, i) => `<div class="zhrow"><span>${esc(w.e)} ${esc(w.w)}</span><button class="tiny-btn red" onclick="delEn(${i})">✕</button></div>`).join("")}
+    </div>
+
+    <h3>🎉 Redeemed prizes</h3>
+    <div class="card">
+      ${S.redeemed.length ? S.redeemed.slice(0, 15).map((r, i) => `<div class="zhrow"><span>${esc(r.e)} ${esc(r.name)} · ${r.cost} ⭐ · ${esc(r.date)}</span><button class="tiny-btn" onclick="giveBack(${i})">Give back</button></div>`).join("") : `<p class="note">Nothing redeemed yet.</p>`}
+    </div>
+
+    <h3>Danger zone</h3>
+    <div class="card"><button class="tiny-btn red" onclick="resetAll()">Reset everything on this device</button></div>
+  </div>`;
+}
+function setPts() { S.points = intIn("ptsIn", 0, 100000, S.points); save(); refreshAdmin(); }
+function updPrize(i) {
+  const p = S.prizes[i]; if (!p) return;
+  p.e = document.getElementById("pe" + i).value.trim() || "🎁";
+  p.name = document.getElementById("pn" + i).value.trim() || "Prize";
+  p.cost = intIn("pc" + i, 1, 100000, p.cost);
+  save();
+}
+function delPrize(i) { if (confirm("Delete this prize?")) { S.prizes.splice(i, 1); save(); refreshAdmin(); } }
+function addPrize() {
+  const name = document.getElementById("npN").value.trim();
+  const cost = intIn("npC", 1, 100000, 0);
+  if (!name || !cost) { alert("Please enter a prize name and a cost."); return; }
+  S.prizes.push({ e: document.getElementById("npE").value.trim() || "🎁", name, cost });
+  save(); refreshAdmin();
+}
+function updSettings() {
+  const s = S.settings;
+  s.ppc = intIn("sPpc", 1, 10, s.ppc);
+  s.bonus = intIn("sBonus", 0, 50, s.bonus);
+  s.perRound = intIn("sRound", 3, 20, s.perRound);
+  s.carry = document.getElementById("sCarry").checked;
+  s.sound = document.getElementById("sSound").checked;
+  s.speak = document.getElementById("sSpeak").checked;
+  s.starters = document.getElementById("sStart").checked;
+  save();
+}
+function addZh() {
+  const g = document.getElementById("zhG").value.trim() || "Words";
+  const lines = document.getElementById("zhT").value.split(/\n/).map(x => x.trim()).filter(Boolean);
+  const bad = []; let n = 0;
+  lines.forEach(line => {
+    const parts = line.split(/[|｜]/).map(x => x.trim());
+    const c = (parts[0] || "").replace(/\s/g, "");
+    const z = normZ(parts[1] || "");
+    const e = parts[2] || "";
+    const syl = z ? z.split(" ") : [];
+    if (!c || !z || Array.from(c).length !== syl.length) { bad.push(line); return; }
+    S.zhWords.push({ c, z, e, g }); n++;
+  });
+  S.lastGroup = g; save();
+  if (bad.length) alert("These lines were not added. Check that the number of characters matches the number of 注音 syllables (separated by spaces):\n\n" + bad.join("\n"));
+  refreshAdmin();
+}
+function delZh(i) { S.zhWords.splice(i, 1); save(); refreshAdmin(); }
+function delZhGroup(i) {
+  const g = S.zhWords[i] && S.zhWords[i].g;
+  if (g != null && confirm(`Delete every word in "${g}"?`)) { S.zhWords = S.zhWords.filter(w => w.g !== g); save(); refreshAdmin(); }
+}
+function addEn() {
+  const lines = document.getElementById("enT").value.split(/\n/).map(x => x.trim()).filter(Boolean);
+  const bad = [];
+  lines.forEach(line => {
+    const parts = line.split(/[|｜]/).map(x => x.trim());
+    const w = (parts[0] || "").toLowerCase();
+    if (!/^[a-z]{2,8}$/.test(w)) { bad.push(line); return; }
+    if (S.enWords.some(x => x.w === w) || WORDS.some(x => x.w === w)) return;
+    S.enWords.push({ w, e: parts[1] || "🔤" });
+  });
+  save();
+  if (bad.length) alert("These lines were not added (letters only, 2 to 8 letters):\n\n" + bad.join("\n"));
+  refreshAdmin();
+}
+function delEn(i) { S.enWords.splice(i, 1); save(); refreshAdmin(); }
+function giveBack(i) {
+  const r = S.redeemed[i]; if (!r) return;
+  if (confirm(`Give back ${r.cost} points and remove "${r.name}" from the list?`)) {
+    S.points += r.cost; S.redeemed.splice(i, 1); save(); refreshAdmin();
+  }
+}
+function resetAll() {
+  if (confirm("Erase all points, prizes, added words and settings on this device?")) { S = DEFAULTS(); save(); home(); }
+}
+
+home();
+</script>
+</body>
+</html>
