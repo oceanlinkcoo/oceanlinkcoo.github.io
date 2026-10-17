@@ -111,7 +111,16 @@
   .zhrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0;
     border-bottom: 1px dashed #e6e0f7; font-size: 1.1rem; }
   .grp { font-weight: bold; margin: 12px 0 2px; display: flex; justify-content: space-between; align-items: center; }
+
+  /* stroke writing */
+  .writebox { margin: 8px auto; background-color: #fff; border-radius: 20px; border: 3px solid #d9d0f5;
+    touch-action: none; -webkit-user-select: none; user-select: none; overflow: hidden;
+    background-image: linear-gradient(#ece6fb, #ece6fb), linear-gradient(#ece6fb, #ece6fb);
+    background-size: 100% 2px, 2px 100%; background-position: center, center; background-repeat: no-repeat; }
+  .writebox svg { display: block; touch-action: none; }
+  .zhu-big { font-size: 2.4rem; font-weight: bold; color: var(--pink); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -129,7 +138,7 @@ const DEFAULTS = () => ({
     { e: "🧸", name: "A small toy", cost: 60 }
   ],
   redeemed: [],
-  settings: { ppc: 1, bonus: 5, carry: true, perRound: 8, sound: true, speak: true, starters: true },
+  settings: { ppc: 1, bonus: 5, carry: true, perRound: 8, sound: true, speak: true, starters: true, writeRound: 5, writeGuide: true },
   zhWords: [],     // added by grown-ups: { c: characters, z: zhuyin, e: emoji, g: group }
   enWords: [],     // added by grown-ups: { w: word, e: emoji }
   lastGroup: ""
@@ -259,7 +268,12 @@ function celebrate(word, lang) { playJingle(); setTimeout(() => say(word, lang),
 /* points */
 function award() { const n = S.settings.ppc; S.points += n; roundPts += n; save(); }
 
+/* screenId changes every time a new screen is drawn, so delayed actions from an old screen can be ignored */
+let screenId = 0;
+function later(fn, ms) { const id = screenId; setTimeout(() => { if (id === screenId) fn(); }, ms); }
+
 function topbar(label) {
+  screenId++;
   return `<div class="topbar"><button class="small-btn" onclick="home()">🏠 ${label || "Home"}</button><div class="stars">⭐ ${S.points}</div></div>`;
 }
 
@@ -276,6 +290,7 @@ function nextPrizeLines() {
   return out;
 }
 function home() {
+  screenId++;
   app.innerHTML = `
     <h1>🌈 Learning Fun! 🌈</h1>
     <div class="pointcard">
@@ -401,7 +416,7 @@ function pickTile(idx) {
       document.getElementById("pic").classList.add("pop");
       celebrate(word);
       sp.i++;
-      setTimeout(nextSpell, 1900);
+      later(nextSpell, 1900);
     } else { say(t.c); }
   } else {
     sp.mistakes++;
@@ -480,7 +495,7 @@ function pickAns(n, btn) {
     playJingle();
     document.querySelectorAll("#answers button").forEach(b => b.disabled = true);
     mt.i++;
-    setTimeout(nextMath, 1500);
+    later(nextMath, 1500);
   } else {
     mt.mistakes++;
     btn.disabled = true;
@@ -506,6 +521,7 @@ function zhMenu() {
     <p class="sub">Pick a game</p>
     <button class="big-btn pink" onclick="zhPick('pic')">🖼️ Spell it<br><small>picture + character</small></button>
     <button class="big-btn blue" onclick="zhPick('char')">字 Spell from the character<br><small>no picture</small></button>
+    <button class="big-btn green" onclick="zhPick('write')">✍️ Write the character<br><small>trace each stroke with your finger</small></button>
     ${voiceNote}
   `;
 }
@@ -519,10 +535,12 @@ function zhPick(mode) {
         gs.map((g, i) => `<button class="big-btn ${COLORS[i % 4]}" onclick="zhStart(${i})">${esc(g)}</button>`).join("")
       : `<p class="sub">No words yet. Ask a grown-up to add some! 🔒</p>`}
     <button class="small-btn" onclick="zhMenu()">⬅️ Back</button>
+    ${mode === "write" ? `<p class="note" style="margin-top:18px">Stroke data: Make Me a Hanzi (Arphic Public License) · Hanzi Writer (MIT)</p>` : ""}
   `;
 }
 let zs = {};
 function zhStart(gi) {
+  if (zmode === "write") return startWrite(gi);
   const all = allZh(), gs = zhGroups();
   const pool = gi < 0 ? all : all.filter(w => w.g === gs[gi]);
   if (!pool.length) return zhMenu();
@@ -568,7 +586,7 @@ function pickZhTile(idx) {
       document.getElementById("pic").classList.add("pop");
       celebrate(zs.w.c, "zh-TW");
       zs.i++;
-      setTimeout(nextZh, 1900);
+      later(nextZh, 1900);
     }
   } else {
     zs.mistakes++;
@@ -577,6 +595,139 @@ function pickZhTile(idx) {
     msg.style.color = "#e07a00"; msg.textContent = "Try again! 💪";
     setTimeout(() => { msg.textContent = ""; msg.style.color = ""; }, 900);
   }
+}
+
+/* =====================================================================
+   WRITING GAME: trace each stroke with a finger (uses Hanzi Writer)
+   ===================================================================== */
+const WRITE_MISTAKE_LIMIT = 3;     // at most this many wrong strokes still earns points
+let wr = {};
+function startWrite(gi) {
+  if (typeof HanziWriter === "undefined") {
+    app.innerHTML = `${topbar()}
+      <h2>✍️ Needs the internet</h2>
+      <p class="sub">The writing game can't load right now. Please check the connection and try again.</p>
+      <button class="big-btn blue" onclick="zhMenu()">⬅️ Back</button>`;
+    return;
+  }
+  const all = allZh(), gs = zhGroups();
+  const pool = gi < 0 ? all : all.filter(w => w.g === gs[gi]);
+  const seen = {}, items = [];
+  pool.forEach(w => {
+    const syl = w.z.split(" ");
+    Array.from(w.c).forEach((ch, idx) => {
+      if (!/[㐀-鿿]/.test(ch) || seen[ch]) return;
+      seen[ch] = true;
+      items.push({ ch, idx, word: w, zhuyin: syl[idx] || "" });
+    });
+  });
+  if (!items.length) return zhMenu();
+  roundPts = 0;
+  const size = Math.max(220, Math.min(320, (window.innerWidth || 360) - 64));
+  wr = { gi, size, list: shuffle(items).slice(0, Math.min(S.settings.writeRound, items.length)), i: 0, correct: 0 };
+  nextWrite();
+}
+function nextWrite() {
+  if (wr.i >= wr.list.length) return finish(wr.correct, wr.list.length, () => startWrite(wr.gi), () => zhPick("write"));
+  const it = wr.list[wr.i], w = it.word;
+  wr.item = it; wr.peeked = false;
+  const blanked = Array.from(w.c).map((c, i) => i === it.idx ? "□" : c).join("");
+  curSay = { text: w.c, lang: "zh-TW" };
+  app.innerHTML = `${topbar()}
+    <div class="progress"><div style="width:${(wr.i / wr.list.length) * 100}%"></div></div>
+    <div class="card">
+      ${w.e ? `<div style="font-size:3.2rem;line-height:1.1">${esc(w.e)}</div>` : ""}
+      <div class="hanzi-big" style="font-size:2.8rem">${esc(blanked)}</div>
+      <div class="zhu-big">${esc(it.zhuyin)}</div>
+      <button class="small-btn" onclick="sayCur()">🔊 Hear it</button>
+      <div class="writebox" id="wbox" style="width:${wr.size + 6}px;height:${wr.size + 6}px"></div>
+      <div class="msg" id="wmsg"></div>
+      <button class="small-btn" onclick="writeWatch()">▶️ Watch again</button>
+      <button class="small-btn" onclick="writeRestart()">🔁 Start over</button>
+    </div>
+  `;
+  mountWriter(true);
+  setTimeout(sayCur, 300);
+}
+function wmsg(text, color) {
+  const m = document.getElementById("wmsg");
+  if (m) { m.textContent = text; m.style.color = color || ""; }
+}
+function mountWriter(animateFirst) {
+  const box = document.getElementById("wbox");
+  if (!box) return;
+  box.innerHTML = "";
+  const tok = screenId, ch = wr.item.ch;
+  wr.done = false;
+  let writer;
+  const live = () => tok === screenId && wr.writer === writer && !wr.done;
+  const startQuiz = () => {
+    if (!live()) return;
+    wmsg("✏️ Your turn! Draw it with your finger");
+    writer.quiz({
+      leniency: 1.25,
+      showHintAfterMisses: 2,
+      markStrokeCorrectAfterMisses: 4,
+      highlightOnComplete: true,
+      onCorrectStroke: d => {
+        if (!live()) return;
+        tone(523 + (d.strokeNum || 0) * 45, 0, 0.14, "sine", 0.2);
+        wmsg(d.strokesRemaining > 0 ? `✅ ${d.strokesRemaining} more ${d.strokesRemaining === 1 ? "stroke" : "strokes"}` : "", "#4cd08a");
+      },
+      onMistake: d => {
+        if (!live()) return;
+        tone(196, 0, 0.2, "triangle", 0.16);
+        box.classList.remove("shake"); void box.offsetWidth; box.classList.add("shake");
+        wmsg(d.mistakesOnStroke >= 2 ? "💡 Follow the hint!" : "Not quite. Try again! 💪", "#e07a00");
+      },
+      onComplete: d => {
+        if (!live()) return;
+        wr.done = true;
+        const mistakes = (d && d.totalMistakes) || 0;
+        if (!wr.peeked && mistakes <= WRITE_MISTAKE_LIMIT) {
+          wr.correct++; award();
+          wmsg("🎉 " + cheer(), "#4cd08a");
+        } else {
+          wmsg("👍 Nice work! Keep practicing", "#6a5acd");
+        }
+        playJingle();
+        setTimeout(() => say(wr.item.word.c, "zh-TW"), 800);
+        wr.i++;
+        later(nextWrite, 2300);
+      }
+    });
+  };
+  writer = HanziWriter.create("wbox", ch, {
+    width: wr.size, height: wr.size, padding: 14,
+    showCharacter: false, showOutline: !!S.settings.writeGuide,
+    strokeColor: "#3b2f5c", outlineColor: "#e2daf6", highlightColor: "#4cd08a", drawingColor: "#5a8ff5",
+    drawingWidth: 14, strokeAnimationSpeed: 1.2, delayBetweenStrokes: 250,
+    onLoadCharDataError: () => {
+      if (!live()) return;
+      wr.done = true;
+      wmsg("Hmm, I can't find the strokes for this one. Skipping it!", "#e07a00");
+      wr.i++;
+      later(nextWrite, 2000);
+    }
+  });
+  wr.writer = writer;
+  if (animateFirst) {
+    wmsg("👀 Watch the strokes!");
+    writer.animateCharacter({ onComplete: startQuiz });
+  } else {
+    startQuiz();
+  }
+}
+function writeWatch() {      // showing the answer means no points for this character
+  if (!wr.writer) return;
+  wr.peeked = true;
+  try { wr.writer.cancelQuiz(); } catch (e) {}
+  mountWriter(true);
+}
+function writeRestart() {
+  if (!wr.writer) return;
+  try { wr.writer.cancelQuiz(); } catch (e) {}
+  mountWriter(false);
 }
 
 /* =====================================================================
@@ -652,6 +803,9 @@ function admin() {
       <div class="chk"><input type="checkbox" id="sSound" ${s.sound ? "checked" : ""} onchange="updSettings()"><span>Sound effects (jingles)</span></div>
       <div class="chk"><input type="checkbox" id="sSpeak" ${s.speak ? "checked" : ""} onchange="updSettings()"><span>Read words aloud</span></div>
       <div class="chk"><input type="checkbox" id="sStart" ${s.starters ? "checked" : ""} onchange="updSettings()"><span>Include the starter 注音 words</span></div>
+      <label>Characters per writing round</label>
+      <input type="number" id="sWrite" value="${s.writeRound}" min="2" max="15" onchange="updSettings()">
+      <div class="chk"><input type="checkbox" id="sGuide" ${s.writeGuide ? "checked" : ""} onchange="updSettings()"><span>Writing: show a faint outline to trace</span></div>
     </div>
 
     <h3>🇹🇼 Add 注音 words</h3>
@@ -682,6 +836,7 @@ function admin() {
 
     <h3>Danger zone</h3>
     <div class="card"><button class="tiny-btn red" onclick="resetAll()">Reset everything on this device</button></div>
+    <p class="note" style="margin-top:20px">Stroke-order writing uses Hanzi Writer (MIT license). Stroke data comes from Make Me a Hanzi, released under the Arphic Public License.</p>
   </div>`;
 }
 function setPts() { S.points = intIn("ptsIn", 0, 100000, S.points); save(); refreshAdmin(); }
@@ -709,6 +864,8 @@ function updSettings() {
   s.sound = document.getElementById("sSound").checked;
   s.speak = document.getElementById("sSpeak").checked;
   s.starters = document.getElementById("sStart").checked;
+  s.writeRound = intIn("sWrite", 2, 15, s.writeRound);
+  s.writeGuide = document.getElementById("sGuide").checked;
   save();
 }
 function addZh() {
