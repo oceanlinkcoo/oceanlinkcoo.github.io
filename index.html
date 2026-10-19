@@ -112,12 +112,32 @@
     border-bottom: 1px dashed #e6e0f7; font-size: 1.1rem; }
   .grp { font-weight: bold; margin: 12px 0 2px; display: flex; justify-content: space-between; align-items: center; }
 
+  /* compact top bar so Back, Home, Skip and the score stay on one row on small phones */
+  .topbar { gap: 6px; }
+  .topbar > div { display: flex; align-items: center; white-space: nowrap; }
+  .topbar .small-btn { padding: 8px 11px; font-size: 1rem; margin: 0 2px; }
+  .topbar .stars { font-size: 1.2rem; }
+  @media (max-width: 350px) {
+    .topbar .small-btn { padding: 8px 8px; font-size: .9rem; margin: 0 1px; }
+    .topbar .stars { font-size: 1.05rem; }
+  }
+
   /* stroke writing */
   .writebox { margin: 8px auto; background-color: #fff; border-radius: 20px; border: 3px solid #d9d0f5;
     touch-action: none; -webkit-user-select: none; user-select: none; overflow: hidden;
     background-image: linear-gradient(#ece6fb, #ece6fb), linear-gradient(#ece6fb, #ece6fb);
     background-size: 100% 2px, 2px 100%; background-position: center, center; background-repeat: no-repeat; }
   .writebox svg { display: block; touch-action: none; }
+  .admin select { width: 100%; font-family: inherit; font-size: 1.1rem; padding: 10px; border: 2px solid #d9d0f5;
+    border-radius: 12px; background: #fff; color: var(--ink); }
+  .prompt-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; margin: 20px 0 6px; }
+  .cz { display: inline-flex; align-items: center; margin: 0 8px; }
+  .cz-ch { font-size: 3rem; font-weight: bold; line-height: 1.1; }
+  .zhv { display: inline-flex; align-items: center; margin-left: 4px; color: var(--pink); font-weight: bold;
+    font-size: 2rem; line-height: 1.1; }
+  .zhv-col { position: relative; display: flex; flex-direction: column; align-items: center; }
+  .zhv-dot { position: absolute; top: -.55em; left: 0; right: 0; text-align: center; font-size: 1.35em; line-height: 1; }
+  .zhv-tone { margin-left: 4px; font-size: 1.2em; }
   .zhu-big { font-size: 2.4rem; font-weight: bold; color: var(--pink); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
@@ -129,6 +149,10 @@
 /* =====================================================================
    SAVED DATA (stays on this device/browser)
    ===================================================================== */
+/* PRIZE SHOP SWITCH: set to true to bring back the prize shop, the prize list and the redeemed list.
+   While false, the home page just shows a tally of stars earned. Saved prizes are kept either way. */
+const SHOW_PRIZES = false;
+
 const KEY = "learningFun_v1";
 const DEFAULTS = () => ({
   points: 0,
@@ -138,7 +162,7 @@ const DEFAULTS = () => ({
     { e: "🧸", name: "A small toy", cost: 60 }
   ],
   redeemed: [],
-  settings: { ppc: 1, bonus: 5, carry: true, perRound: 8, sound: true, speak: true, starters: true, writeRound: 5, writeGuide: true },
+  settings: { ppc: 1, bonus: 5, carry: true, perRound: 8, sound: true, speak: true, writeRound: 5, writeGuide: true },
   zhWords: [],     // added by grown-ups: { c: characters, z: zhuyin, e: emoji, g: group }
   enWords: [],     // added by grown-ups: { w: word, e: emoji }
   lastGroup: ""
@@ -178,29 +202,37 @@ const WORDS = [
   { w: "house", e: "🏠", l: 3 }, { w: "cloud", e: "☁️", l: 3 }, { w: "tiger", e: "🐯", l: 3 },
   { w: "zebra", e: "🦓", l: 3 }, { w: "robot", e: "🤖", l: 3 }
 ];
-/* Mandarin starter words. c = Traditional characters, e = picture, z = 注音 (syllables separated by a space).
-   In Taiwan the light-tone dot goes BEFORE the symbol, like ˙ㄗ. */
-const ZH_STARTER = [
-  { c: "爸爸", e: "👨", z: "ㄅㄚˋ ˙ㄅㄚ" }, { c: "杯子", e: "🥤", z: "ㄅㄟ ˙ㄗ" },
-  { c: "皮球", e: "⚽", z: "ㄆㄧˊ ㄑㄧㄡˊ" }, { c: "葡萄", e: "🍇", z: "ㄆㄨˊ ㄊㄠˊ" },
-  { c: "蘋果", e: "🍎", z: "ㄆㄧㄥˊ ㄍㄨㄛˇ" },
-  { c: "媽媽", e: "👩", z: "ㄇㄚ ˙ㄇㄚ" }, { c: "貓", e: "🐱", z: "ㄇㄠ" },
-  { c: "帽子", e: "🧢", z: "ㄇㄠˋ ˙ㄗ" },
-  { c: "飛機", e: "✈️", z: "ㄈㄟ ㄐㄧ" }, { c: "房子", e: "🏠", z: "ㄈㄤˊ ˙ㄗ" },
-  { c: "大象", e: "🐘", z: "ㄉㄚˋ ㄒㄧㄤˋ" }, { c: "蛋", e: "🥚", z: "ㄉㄢˋ" },
-  { c: "燈", e: "💡", z: "ㄉㄥ" },
-  { c: "太陽", e: "☀️", z: "ㄊㄞˋ ㄧㄤˊ" }, { c: "兔子", e: "🐰", z: "ㄊㄨˋ ˙ㄗ" },
-  { c: "糖", e: "🍬", z: "ㄊㄤˊ" },
-  { c: "牛", e: "🐮", z: "ㄋㄧㄡˊ" }, { c: "鳥", e: "🐦", z: "ㄋㄧㄠˇ" },
-  { c: "牛奶", e: "🥛", z: "ㄋㄧㄡˊ ㄋㄞˇ" },
-  { c: "老虎", e: "🐯", z: "ㄌㄠˇ ㄏㄨˇ" }, { c: "梨", e: "🍐", z: "ㄌㄧˊ" },
-  { c: "龍", e: "🐉", z: "ㄌㄨㄥˊ" },
-  { c: "狗", e: "🐶", z: "ㄍㄡˇ" }, { c: "鼓", e: "🥁", z: "ㄍㄨˇ" },
-  { c: "鍋", e: "🍲", z: "ㄍㄨㄛ" },
-  { c: "咖啡", e: "☕", z: "ㄎㄚ ㄈㄟ" }, { c: "褲子", e: "👖", z: "ㄎㄨˋ ˙ㄗ" },
-  { c: "花", e: "🌸", z: "ㄏㄨㄚ" }, { c: "河馬", e: "🦛", z: "ㄏㄜˊ ㄇㄚˇ" },
-  { c: "火", e: "🔥", z: "ㄏㄨㄛˇ" }, { c: "海", e: "🌊", z: "ㄏㄞˇ" }
+/* Lessons taught in class. c = Traditional characters, z = 注音 (syllables separated by a space),
+   e = picture (optional). In Taiwan the light-tone dot goes BEFORE the symbol, like ˙ㄗ.
+   Later lessons are added on the grown-ups page, so this list only holds the first four. */
+const LESSONS = [
+  { name: "第一課", words: [
+    { c: "一", z: "ㄧ", e: "1️⃣" }, { c: "二", z: "ㄦˋ", e: "2️⃣" }, { c: "三", z: "ㄙㄢ", e: "3️⃣" },
+    { c: "四", z: "ㄙˋ", e: "4️⃣" }, { c: "五", z: "ㄨˇ", e: "5️⃣" }, { c: "六", z: "ㄌㄧㄡˋ", e: "6️⃣" },
+    { c: "七", z: "ㄑㄧ", e: "7️⃣" }, { c: "八", z: "ㄅㄚ", e: "8️⃣" }, { c: "九", z: "ㄐㄧㄡˇ", e: "9️⃣" },
+    { c: "十", z: "ㄕˊ", e: "🔟" }
+  ] },
+  { name: "第二課", words: [
+    { c: "今天", z: "ㄐㄧㄣ ㄊㄧㄢ", e: "📅" }, { c: "昨天", z: "ㄗㄨㄛˊ ㄊㄧㄢ", e: "⏪" },
+    { c: "明天", z: "ㄇㄧㄥˊ ㄊㄧㄢ", e: "⏩" }, { c: "是", z: "ㄕˋ", e: "" },
+    { c: "日", z: "ㄖˋ", e: "☀️" }, { c: "月", z: "ㄩㄝˋ", e: "🌙" },
+    { c: "星期", z: "ㄒㄧㄥ ㄑㄧ", e: "🗓️" }
+  ] },
+  { name: "第三課", words: [
+    { c: "市", z: "ㄕˋ", e: "🏪" }, { c: "李子", z: "ㄌㄧˇ ˙ㄗ", e: "" },
+    { c: "多少", z: "ㄉㄨㄛ ㄕㄠˇ", e: "🔢" }, { c: "元", z: "ㄩㄢˊ", e: "💰" },
+    { c: "南瓜", z: "ㄋㄢˊ ㄍㄨㄚ", e: "🎃" }, { c: "梨子", z: "ㄌㄧˊ ˙ㄗ", e: "🍐" },
+    { c: "西瓜", z: "ㄒㄧ ㄍㄨㄚ", e: "🍉" }
+  ] },
+  { name: "第四課", words: [
+    { c: "這", z: "ㄓㄜˋ", e: "👉" }, { c: "馬", z: "ㄇㄚˇ", e: "🐴" }, { c: "那", z: "ㄋㄚˋ", e: "" },
+    { c: "山", z: "ㄕㄢ", e: "⛰️" }, { c: "人", z: "ㄖㄣˊ", e: "🧑" }, { c: "牛", z: "ㄋㄧㄡˊ", e: "🐮" },
+    { c: "木", z: "ㄇㄨˋ", e: "🪵" }, { c: "鳥", z: "ㄋㄧㄠˇ", e: "🐦" }, { c: "水", z: "ㄕㄨㄟˇ", e: "💧" },
+    { c: "魚", z: "ㄩˊ", e: "🐟" }, { c: "田", z: "ㄊㄧㄢˊ", e: "🌾" }
+  ] }
 ];
+/* Light-tone dot: stored the textbook way (˙ㄗ) but spelled last, after the syllable (ㄗ then ˙) */
+const spellOrder = sy => { const a = Array.from(sy); if (a.length > 1 && a[0] === "˙") { a.shift(); a.push("˙"); } return a; };
 const EXTRA_SYMS = ["ㄚ", "ㄛ", "ㄜ", "ㄟ", "ㄠ", "ㄡ", "ㄢ", "ㄤ", "ㄥ", "ㄧ", "ㄨ", "ㄩ", "ㄐ", "ㄑ", "ㄒ", "ㄗ", "ㄅ", "ㄆ", "ㄇ", "ˊ", "ˇ", "ˋ", "˙"];
 const COLORS = ["blue", "pink", "yellow", "purple"];
 
@@ -272,9 +304,12 @@ function award() { const n = S.settings.ppc; S.points += n; roundPts += n; save(
 let screenId = 0;
 function later(fn, ms) { const id = screenId; setTimeout(() => { if (id === screenId) fn(); }, ms); }
 
-function topbar(label) {
+function topbar(label, back, skip) {   // back / skip = code to run; omit on screens that have none
   screenId++;
-  return `<div class="topbar"><button class="small-btn" onclick="home()">🏠 ${label || "Home"}</button><div class="stars">⭐ ${S.points}</div></div>`;
+  const b = back ? `<button class="small-btn" onclick="${back}">⬅️ Back</button>` : "";
+  const k = skip ? `<button class="small-btn" onclick="${skip}">⏭️ Skip</button>` : "";
+  const homeLabel = back ? "🏠" : "🏠 " + (label || "Home");
+  return `<div class="topbar"><div>${b}<button class="small-btn" onclick="home()">${homeLabel}</button></div><div style="display:flex;align-items:center;gap:6px">${k}<div class="stars">⭐ ${S.points}</div></div></div>`;
 }
 
 /* =====================================================================
@@ -295,12 +330,12 @@ function home() {
     <h1>🌈 Learning Fun! 🌈</h1>
     <div class="pointcard">
       <div class="bigpts">⭐ ${S.points}</div>
-      ${nextPrizeLines()}
-      <button class="big-btn yellow" style="margin-bottom:4px" onclick="shop()">🎁 Prize shop</button>
+      <div class="nextprize">stars earned</div>
+      ${SHOW_PRIZES ? nextPrizeLines() + `<button class="big-btn yellow" style="margin-bottom:4px" onclick="shop()">🎁 Prize shop</button>` : ""}
     </div>
     <button class="big-btn pink" onclick="spellMenu()">🔤 Spelling</button>
     <button class="big-btn blue" onclick="mathMenu()">🔢 Math</button>
-    <button class="big-btn green" onclick="zhMenu()">🇹🇼 注音 Mandarin</button>
+    <button class="big-btn green" onclick="zhMenu()">🇹🇼 Mandarin</button>
     <button class="link-btn" onclick="gate()">🔒 Grown-ups</button>
   `;
 }
@@ -328,7 +363,7 @@ function redeem(i) {
   S.redeemed = S.redeemed.slice(0, 50);
   save();
   playFanfare();
-  app.innerHTML = `${topbar()}
+  app.innerHTML = `${topbar("", "shop()")}
     <div class="card"><div class="trophy">${esc(p.e)}</div><h2>${esc(p.name)}</h2>
     <p class="sub">🎉 You got it! Show a grown-up!</p></div>
     <button class="big-btn green" onclick="shop()">⬅️ Back to the shop</button>`;
@@ -345,7 +380,7 @@ function finish(correct, total, again, back) {
     bonusTxt = `<p class="sub">🌟 Perfect round! +${S.settings.bonus} bonus ⭐</p>`;
   }
   const icon = correct >= total * 0.8 ? "🏆" : correct >= total * 0.5 ? "🥈" : "🌟";
-  app.innerHTML = `${topbar()}
+  app.innerHTML = `${topbar("", "_back()")}
     <div class="card">
       <div class="trophy">${icon}</div>
       <h2>${cheer()}</h2>
@@ -387,10 +422,10 @@ function nextSpell() {
   const letters = item.w.split("");
   const pool = "abcdefghijklmnopqrstuvwxyz".split("").filter(c => !letters.includes(c));
   const extras = shuffle(pool).slice(0, 2);
-  sp.pos = 0; sp.item = item; sp.mistakes = 0;
+  sp.pos = 0; sp.item = item; sp.mistakes = 0; sp.done = false;
   sp.tiles = shuffle(letters.concat(extras)).map((c, idx) => ({ c, idx }));
   curSay = { text: item.w, lang: "en-US" };
-  app.innerHTML = `${topbar()}
+  app.innerHTML = `${topbar("", "spellMenu()", "skipSpell()")}
     <div class="progress"><div style="width:${(sp.i / sp.list.length) * 100}%"></div></div>
     <div class="card">
       <div class="picture" id="pic">${esc(item.e)}</div>
@@ -402,6 +437,7 @@ function nextSpell() {
   `;
   setTimeout(sayCur, 300);
 }
+function skipSpell() { if (sp.done) return; sp.done = true; sp.i++; nextSpell(); }
 function pickTile(idx) {
   const t = sp.tiles[idx], word = sp.item.w, btn = document.getElementById("t" + idx);
   if (t.c === word[sp.pos]) {
@@ -410,6 +446,7 @@ function pickTile(idx) {
     btn.classList.add("used");
     sp.pos++;
     if (sp.pos === word.length) {
+      sp.done = true;
       if (sp.mistakes === 0) { sp.correct++; award(); }
       const msg = document.getElementById("msg");
       msg.textContent = "🎉 " + cheer();
@@ -470,11 +507,11 @@ function nextMath() {
   const pair = op === "add" ? genAdd(S.settings.carry) : genSub(S.settings.carry);
   const a = pair[0], b = pair[1];
   const ans = op === "add" ? a + b : a - b;
-  mt.ans = ans; mt.mistakes = 0;
+  mt.ans = ans; mt.mistakes = 0; mt.done = false;
   curSay = { text: `${a} ${op === "add" ? "plus" : "take away"} ${b}`, lang: "en-US" };
   const sym = op === "add" ? "+" : "−";
   const br = n => `${n} = ${Math.floor(n / 10) * 10} + ${n % 10}`;
-  app.innerHTML = `${topbar()}
+  app.innerHTML = `${topbar("", "mathMenu()", "skipMath()")}
     <div class="progress"><div style="width:${(mt.i / mt.total) * 100}%"></div></div>
     <div class="card">
       <div class="problem">${a} ${sym} ${b} = ?</div>
@@ -487,9 +524,11 @@ function nextMath() {
   `;
 }
 function showHint(x, y) { document.getElementById("hint").innerHTML = x + "<br>" + y; }
+function skipMath() { if (mt.done) return; mt.done = true; mt.i++; nextMath(); }
 function pickAns(n, btn) {
   const msg = document.getElementById("msg");
   if (n === mt.ans) {
+    mt.done = true;
     if (mt.mistakes === 0) { mt.correct++; award(); }
     msg.style.color = ""; msg.textContent = "🎉 " + cheer();
     playJingle();
@@ -506,8 +545,33 @@ function pickAns(n, btn) {
 /* =====================================================================
    MANDARIN 注音 SPELLING
    ===================================================================== */
-const allZh = () => (S.settings.starters ? ZH_STARTER.map(w => Object.assign({ g: "Starter" }, w)) : []).concat(S.zhWords);
-function zhGroups() { const gs = []; allZh().forEach(w => { if (!gs.includes(w.g)) gs.push(w.g); }); return gs; }
+const NUMS = "零一二三四五六七八九";
+const zhNum = n => n < 10 ? NUMS[n] : n < 20 ? "十" + (n % 10 ? NUMS[n % 10] : "") : NUMS[Math.floor(n / 10)] + "十" + (n % 10 ? NUMS[n % 10] : "");
+function lessonNo(name) {
+  const m = /^第\s*([0-9]+|[一二三四五六七八九十]+)\s*[課课]$/.exec(String(name).trim());
+  if (!m) return null;
+  const t = m[1];
+  if (/^[0-9]+$/.test(t)) return parseInt(t, 10);
+  if (t.includes("十")) { const p = t.split("十"); return (p[0] ? NUMS.indexOf(p[0]) : 1) * 10 + (p[1] ? NUMS.indexOf(p[1]) : 0); }
+  return NUMS.indexOf(t);
+}
+const canonLesson = name => { const n = lessonNo(name); return n && n > 0 && n < 100 ? "第" + zhNum(n) + "課" : String(name).trim(); };
+const allZh = () => {
+  const out = [];
+  LESSONS.forEach(L => L.words.forEach(w => out.push(Object.assign({ g: L.name }, w))));
+  return out.concat(S.zhWords.map(w => Object.assign({}, w, { g: canonLesson(w.g) })));
+};
+function zhGroups() {      // lessons in order: 第一課, 第二課, ... then any other names
+  const gs = [];
+  allZh().forEach(w => { if (!gs.includes(w.g)) gs.push(w.g); });
+  return gs.map((g, i) => ({ g, i, n: lessonNo(g) })).sort((a, b) =>
+    a.n != null && b.n != null ? (a.n - b.n || a.i - b.i) : a.n != null ? -1 : b.n != null ? 1 : a.i - b.i).map(x => x.g);
+}
+function nextLessonNames() {
+  let m = 0;
+  zhGroups().forEach(g => { const n = lessonNo(g); if (n && n > m) m = n; });
+  return ["第" + zhNum(m + 1) + "課", "第" + zhNum(m + 2) + "課"];
+}
 
 let zmode = "pic";
 function zhMenu() {
@@ -517,7 +581,7 @@ function zhMenu() {
     if (v.length && !v.some(x => /^zh/i.test(x.lang))) voiceNote = `<p class="note">🔇 This device has no Mandarin voice, so words won't be read aloud.</p>`;
   } catch (e) {}
   app.innerHTML = `${topbar()}
-    <h2>🇹🇼 注音 Mandarin</h2>
+    <h2>🇹🇼 Mandarin</h2>
     <p class="sub">Pick a game</p>
     <button class="big-btn pink" onclick="zhPick('pic')">🖼️ Spell it<br><small>picture + character</small></button>
     <button class="big-btn blue" onclick="zhPick('char')">字 Spell from the character<br><small>no picture</small></button>
@@ -528,13 +592,10 @@ function zhMenu() {
 function zhPick(mode) {
   zmode = mode;
   const gs = zhGroups();
-  app.innerHTML = `${topbar()}
-    <h2>Which words?</h2>
-    ${gs.length
-      ? `<button class="big-btn green" onclick="zhStart(-1)">🌈 All words</button>` +
-        gs.map((g, i) => `<button class="big-btn ${COLORS[i % 4]}" onclick="zhStart(${i})">${esc(g)}</button>`).join("")
-      : `<p class="sub">No words yet. Ask a grown-up to add some! 🔒</p>`}
-    <button class="small-btn" onclick="zhMenu()">⬅️ Back</button>
+  app.innerHTML = `${topbar("", "zhMenu()")}
+    <h2>哪一課？ Which lesson?</h2>
+    ${gs.map((g, i) => `<button class="big-btn ${COLORS[i % 4]}" onclick="zhStart(${i})">${esc(g)}</button>`).join("")}
+    <button class="big-btn green" onclick="zhStart(-1)">🌈 綜合練習<br><small>words from every lesson</small></button>
     ${mode === "write" ? `<p class="note" style="margin-top:18px">Stroke data: Make Me a Hanzi (Arphic Public License) · Hanzi Writer (MIT)</p>` : ""}
   `;
 }
@@ -551,16 +612,16 @@ function zhStart(gi) {
 function nextZh() {
   if (zs.i >= zs.list.length) return finish(zs.correct, zs.list.length, () => zhStart(zs.gi), () => zhPick(zs.mode));
   const w = zs.list[zs.i];
-  const syl = w.z.split(" ").map(s => Array.from(s));
+  const syl = w.z.split(" ").map(spellOrder);
   const flat = syl.flat();
   const extras = shuffle(EXTRA_SYMS.filter(c => !flat.includes(c))).slice(0, 2);
-  zs.w = w; zs.flat = flat; zs.pos = 0; zs.mistakes = 0;
+  zs.w = w; zs.flat = flat; zs.pos = 0; zs.mistakes = 0; zs.done = false;
   zs.tiles = shuffle(flat.concat(extras)).map((c, idx) => ({ c, idx }));
   curSay = { text: w.c, lang: "zh-TW" };
   const showPic = zs.mode === "pic";
   const n = Array.from(w.c).length;
   const size = Math.max(40, Math.min(88, Math.floor(300 / n)));
-  app.innerHTML = `${topbar()}
+  app.innerHTML = `${topbar("", "zhPick('" + zs.mode + "')", "skipZh()")}
     <div class="progress"><div style="width:${(zs.i / zs.list.length) * 100}%"></div></div>
     <div class="card">
       ${showPic ? `<div class="picture" id="pic">${esc(w.e || "✨")}</div><div class="hanzi">${esc(w.c)}</div>`
@@ -573,6 +634,7 @@ function nextZh() {
   `;
   setTimeout(sayCur, 300);
 }
+function skipZh() { if (zs.done) return; zs.done = true; zs.i++; nextZh(); }
 function pickZhTile(idx) {
   const t = zs.tiles[idx], btn = document.getElementById("t" + idx);
   if (t.c === zs.flat[zs.pos]) {
@@ -581,6 +643,7 @@ function pickZhTile(idx) {
     btn.classList.add("used");
     zs.pos++;
     if (zs.pos === zs.flat.length) {
+      zs.done = true;
       if (zs.mistakes === 0) { zs.correct++; award(); }
       document.getElementById("msg").textContent = "🎉 " + cheer();
       document.getElementById("pic").classList.add("pop");
@@ -604,10 +667,10 @@ const WRITE_MISTAKE_LIMIT = 3;     // at most this many wrong strokes still earn
 let wr = {};
 function startWrite(gi) {
   if (typeof HanziWriter === "undefined") {
-    app.innerHTML = `${topbar()}
+    app.innerHTML = `${topbar("", "zhPick('write')")}
       <h2>✍️ Needs the internet</h2>
       <p class="sub">The writing game can't load right now. Please check the connection and try again.</p>
-      <button class="big-btn blue" onclick="zhMenu()">⬅️ Back</button>`;
+      <button class="big-btn blue" onclick="startWrite(${gi})">🔁 Try again</button>`;
     return;
   }
   const all = allZh(), gs = zhGroups();
@@ -631,14 +694,14 @@ function nextWrite() {
   if (wr.i >= wr.list.length) return finish(wr.correct, wr.list.length, () => startWrite(wr.gi), () => zhPick("write"));
   const it = wr.list[wr.i], w = it.word;
   wr.item = it; wr.peeked = false;
-  const blanked = Array.from(w.c).map((c, i) => i === it.idx ? "□" : c).join("");
+  const promptRow = Array.from(w.c).map((c, i) =>
+    `<span class="cz"><span class="cz-ch">${i === it.idx ? "□" : esc(c)}</span>${i === it.idx ? zhVert(it.zhuyin) : ""}</span>`).join("");
   curSay = { text: w.c, lang: "zh-TW" };
-  app.innerHTML = `${topbar()}
+  app.innerHTML = `${topbar("", "zhPick('write')", "skipWrite()")}
     <div class="progress"><div style="width:${(wr.i / wr.list.length) * 100}%"></div></div>
     <div class="card">
       ${w.e ? `<div style="font-size:3.2rem;line-height:1.1">${esc(w.e)}</div>` : ""}
-      <div class="hanzi-big" style="font-size:2.8rem">${esc(blanked)}</div>
-      <div class="zhu-big">${esc(it.zhuyin)}</div>
+      <div class="prompt-row">${promptRow}</div>
       <button class="small-btn" onclick="sayCur()">🔊 Hear it</button>
       <div class="writebox" id="wbox" style="width:${wr.size + 6}px;height:${wr.size + 6}px"></div>
       <div class="msg" id="wmsg"></div>
@@ -648,6 +711,13 @@ function nextWrite() {
   `;
   mountWriter(true);
   setTimeout(sayCur, 300);
+}
+function zhVert(sy) {
+  const a = Array.from(sy);
+  const dot = a.includes("˙");
+  const tone = a.find(c => "ˊˇˋ".includes(c)) || "";
+  const syms = a.filter(c => c !== "˙" && !"ˊˇˋ".includes(c));
+  return `<span class="zhv"><span class="zhv-col">${dot ? `<span class="zhv-dot">˙</span>` : ""}${syms.map(c => `<span>${esc(c)}</span>`).join("")}</span>${tone ? `<span class="zhv-tone">${esc(tone)}</span>` : ""}</span>`;
 }
 function wmsg(text, color) {
   const m = document.getElementById("wmsg");
@@ -718,6 +788,12 @@ function mountWriter(animateFirst) {
     startQuiz();
   }
 }
+function skipWrite() {
+  if (!wr.item || wr.done) return;
+  wr.done = true;
+  try { wr.writer.cancelQuiz(); } catch (e) {}
+  wr.i++; nextWrite();
+}
 function writeWatch() {      // showing the answer means no points for this character
   if (!wr.writer) return;
   wr.peeked = true;
@@ -751,7 +827,10 @@ function gateCheck() {
   if (v === gateAns) admin(); else gate(true);
 }
 
-const normZ = z => String(z).replace(/[·•‧]/g, "˙").replace(/[　\s]+/g, " ").trim();
+const normZ = z => String(z).replace(/[·•‧]/g, "˙").replace(/[　\s]+/g, " ").trim().split(" ").map(sy => {
+  const a = Array.from(sy);
+  return a.length > 1 && a[a.length - 1] === "˙" && a[0] !== "˙" ? "˙" + a.slice(0, -1).join("") : sy;
+}).join(" ");
 function refreshAdmin() { const y = window.scrollY || 0; admin(); window.scrollTo(0, y); }
 const intIn = (id, lo, hi, dflt) => {
   const v = parseInt(document.getElementById(id).value, 10);
@@ -768,13 +847,13 @@ function admin() {
     <h2 style="text-align:center">🔒 Grown-ups</h2>
     <p class="note" style="text-align:center">Everything here is saved on this device and browser only.</p>
 
-    <h3>⭐ Points</h3>
+    <h3>⭐ Stars</h3>
     <div class="card">
-      <label>Current points</label>
+      <label>Stars earned so far</label>
       <div class="row"><input type="number" id="ptsIn" value="${S.points}" min="0"><button class="tiny-btn" onclick="setPts()">Save</button></div>
     </div>
 
-    <h3>🎁 Prizes</h3>
+    ${SHOW_PRIZES ? `    <h3>🎁 Prizes</h3>
     <div class="card">
       ${S.prizes.map((p, i) => `<div class="row">
         <input type="text" id="pe${i}" value="${esc(p.e)}" style="width:58px;flex:none" onchange="updPrize(${i})">
@@ -790,10 +869,11 @@ function admin() {
         <button class="tiny-btn" onclick="addPrize()">Add</button>
       </div>
     </div>
+    ` : ""}
 
     <h3>⚙️ Settings</h3>
     <div class="card">
-      <label>Points for each right answer (first try)</label>
+      <label>Stars for each right answer (first try)</label>
       <input type="number" id="sPpc" value="${s.ppc}" min="1" max="10" onchange="updSettings()">
       <label>Bonus for a perfect round</label>
       <input type="number" id="sBonus" value="${s.bonus}" min="0" max="50" onchange="updSettings()">
@@ -802,19 +882,19 @@ function admin() {
       <div class="chk"><input type="checkbox" id="sCarry" ${s.carry ? "checked" : ""} onchange="updSettings()"><span>Math: include carrying and borrowing</span></div>
       <div class="chk"><input type="checkbox" id="sSound" ${s.sound ? "checked" : ""} onchange="updSettings()"><span>Sound effects (jingles)</span></div>
       <div class="chk"><input type="checkbox" id="sSpeak" ${s.speak ? "checked" : ""} onchange="updSettings()"><span>Read words aloud</span></div>
-      <div class="chk"><input type="checkbox" id="sStart" ${s.starters ? "checked" : ""} onchange="updSettings()"><span>Include the starter 注音 words</span></div>
       <label>Characters per writing round</label>
       <input type="number" id="sWrite" value="${s.writeRound}" min="2" max="15" onchange="updSettings()">
       <div class="chk"><input type="checkbox" id="sGuide" ${s.writeGuide ? "checked" : ""} onchange="updSettings()"><span>Writing: show a faint outline to trace</span></div>
     </div>
 
-    <h3>🇹🇼 Add 注音 words</h3>
+    <h3>🇹🇼 Add Mandarin words</h3>
     <div class="card">
-      <label>Group name (for example, Week 3)</label>
-      <input type="text" id="zhG" value="${esc(S.lastGroup || "Week 1")}">
+      <p class="note">第一課 to 第四課 are already built in. Add each new lesson's words here.</p>
+      <label>Which lesson are these words for?</label>
+      <select id="zhG">${nextLessonNames().map(g => `<option value="${esc(g)}">${esc(g)} (new lesson)</option>`).concat(zhGroups().map(g => `<option value="${esc(g)}">${esc(g)}</option>`)).join("")}</select>
       <label>Words, one per line</label>
       <textarea id="zhT" placeholder="學校 | ㄒㄩㄝˊ ㄒㄧㄠˋ | 🏫&#10;老師 | ㄌㄠˇ ㄕ | 👩‍🏫&#10;水 | ㄕㄨㄟˇ"></textarea>
-      <p class="note">Format: characters | 注音 | picture emoji (optional). Put a space between syllables. The neutral-tone dot goes before the symbol, like ˙ㄗ. The number of characters must match the number of syllables.</p>
+      <p class="note">Format: characters | 注音 | picture emoji (optional). Put a space between syllables. For a light (neutral) tone, put the dot ˙ before or after the syllable (˙ㄗ or ㄗ˙); either works. The number of characters must match the number of syllables.</p>
       <button class="tiny-btn" onclick="addZh()">Add words</button>
       ${gnames.map(g => `<div class="grp"><span>${esc(g)}</span><button class="tiny-btn red" onclick="delZhGroup(${grouped[g][0]})">Delete group</button></div>
         ${grouped[g].map(i => `<div class="zhrow"><span>${esc(S.zhWords[i].e)} ${esc(S.zhWords[i].c)} · ${esc(S.zhWords[i].z)}</span><button class="tiny-btn red" onclick="delZh(${i})">✕</button></div>`).join("")}`).join("")}
@@ -829,10 +909,11 @@ function admin() {
       ${S.enWords.map((w, i) => `<div class="zhrow"><span>${esc(w.e)} ${esc(w.w)}</span><button class="tiny-btn red" onclick="delEn(${i})">✕</button></div>`).join("")}
     </div>
 
-    <h3>🎉 Redeemed prizes</h3>
+    ${SHOW_PRIZES ? `    <h3>🎉 Redeemed prizes</h3>
     <div class="card">
       ${S.redeemed.length ? S.redeemed.slice(0, 15).map((r, i) => `<div class="zhrow"><span>${esc(r.e)} ${esc(r.name)} · ${r.cost} ⭐ · ${esc(r.date)}</span><button class="tiny-btn" onclick="giveBack(${i})">Give back</button></div>`).join("") : `<p class="note">Nothing redeemed yet.</p>`}
     </div>
+    ` : ""}
 
     <h3>Danger zone</h3>
     <div class="card"><button class="tiny-btn red" onclick="resetAll()">Reset everything on this device</button></div>
@@ -863,13 +944,12 @@ function updSettings() {
   s.carry = document.getElementById("sCarry").checked;
   s.sound = document.getElementById("sSound").checked;
   s.speak = document.getElementById("sSpeak").checked;
-  s.starters = document.getElementById("sStart").checked;
   s.writeRound = intIn("sWrite", 2, 15, s.writeRound);
   s.writeGuide = document.getElementById("sGuide").checked;
   save();
 }
 function addZh() {
-  const g = document.getElementById("zhG").value.trim() || "Words";
+  const g = canonLesson(document.getElementById("zhG").value || "第一課");
   const lines = document.getElementById("zhT").value.split(/\n/).map(x => x.trim()).filter(Boolean);
   const bad = []; let n = 0;
   lines.forEach(line => {
