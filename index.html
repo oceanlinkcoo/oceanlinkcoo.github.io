@@ -20,7 +20,7 @@
     font-family: "Comic Sans MS", "Chalkboard SE", "Trebuchet MS", system-ui, sans-serif; }
   body { display: flex; justify-content: center; }
   #app { width: 100%; max-width: 640px; padding: 16px 16px 40px; text-align: center; }
-  h1 { font-size: 2.2rem; margin: 8px 0 4px; }
+  h1 { font-size: 1.85rem; margin: 8px 0 4px; white-space: nowrap; }
   h2 { font-size: 1.6rem; margin: 8px 0; }
   p.sub { font-size: 1.2rem; margin: 0 0 16px; }
   .big-btn {
@@ -122,6 +122,9 @@
     .topbar .stars { font-size: 1.05rem; }
   }
 
+  .verline { font-size: .85rem; opacity: .55; margin-top: 4px; }
+  .admin input[type=file] { width: 100%; font-family: inherit; font-size: 1rem; margin: 4px 0; }
+
   /* stroke writing */
   .writebox { margin: 8px auto; background-color: #fff; border-radius: 20px; border: 3px solid #d9d0f5;
     touch-action: none; -webkit-user-select: none; user-select: none; overflow: hidden;
@@ -138,8 +141,16 @@
   .zhv-col { position: relative; display: flex; flex-direction: column; align-items: center; }
   .zhv-dot { position: absolute; top: -.55em; left: 0; right: 0; text-align: center; font-size: 1.35em; line-height: 1; }
   .zhv-tone { margin-left: 4px; font-size: 1.2em; }
+  .cells { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; margin: 14px 0 8px; }
+  .cell { display: inline-flex; align-items: center; gap: 6px; background: #faf8ff; border: 3px solid #d9d0f5; border-radius: 18px; padding: 16px 10px 8px; }
+  .cell .zhv { font-size: 1.6rem; margin-left: 0; }
+  .cell-box { display: flex; align-items: center; justify-content: center; width: 58px; height: 64px; font-size: 2.8rem; font-weight: bold; line-height: 1; border-radius: 8px; }
+  .cell.empty { background: #fff; border: 3px dashed var(--green); }
+  .cell.empty .cell-box { background-image: linear-gradient(#e2daf6, #e2daf6), linear-gradient(#e2daf6, #e2daf6); background-size: 100% 2px, 2px 100%;
+    background-position: center; background-repeat: no-repeat; }
   .zhu-big { font-size: 2.4rem; font-weight: bold; color: var(--pink); }
 </style>
+<!-- Credits: stroke-order writing uses Hanzi Writer (MIT license, https://hanziwriter.org). Stroke data: Make Me a Hanzi, released under the Arphic Public License. -->
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body>
@@ -152,6 +163,11 @@
 /* PRIZE SHOP SWITCH: set to true to bring back the prize shop, the prize list and the redeemed list.
    While false, the home page just shows a tally of stars earned. Saved prizes are kept either way. */
 const SHOW_PRIZES = false;
+
+/* VERSION: goes up with every new file (v1.04, v1.05, ...) and shows the publish date.
+   Shown small on the home page and on the grown-ups page, so you can tell which file the browser loaded. */
+const VERSION = "v1.05";
+const VERSION_DATE = "Oct 23, 2026";
 
 const KEY = "learningFun_v1";
 const DEFAULTS = () => ({
@@ -202,33 +218,37 @@ const WORDS = [
   { w: "house", e: "🏠", l: 3 }, { w: "cloud", e: "☁️", l: 3 }, { w: "tiger", e: "🐯", l: 3 },
   { w: "zebra", e: "🦓", l: 3 }, { w: "robot", e: "🤖", l: 3 }
 ];
-/* Lessons taught in class. c = Traditional characters, z = 注音 (syllables separated by a space),
-   e = picture (optional). In Taiwan the light-tone dot goes BEFORE the symbol, like ˙ㄗ.
-   Later lessons are added on the grown-ups page, so this list only holds the first four. */
+/* Lessons taught in class.
+   c = Traditional characters, z = 注音 (syllables separated by a space), e = picture (only when it closely matches the word).
+   h + hz = hint word for the stroke game, used by one-character words only: * marks where the character goes, hz is the 注音 of the
+   hint character(s). "*的" means 是的. Words with two or more characters use their other characters as hints automatically.
+   In Taiwan the light-tone dot goes BEFORE the symbol, like ˙ㄗ. Later lessons are added on the grown-ups page. */
 const LESSONS = [
   { name: "第一課", words: [
-    { c: "一", z: "ㄧ", e: "1️⃣" }, { c: "二", z: "ㄦˋ", e: "2️⃣" }, { c: "三", z: "ㄙㄢ", e: "3️⃣" },
-    { c: "四", z: "ㄙˋ", e: "4️⃣" }, { c: "五", z: "ㄨˇ", e: "5️⃣" }, { c: "六", z: "ㄌㄧㄡˋ", e: "6️⃣" },
-    { c: "七", z: "ㄑㄧ", e: "7️⃣" }, { c: "八", z: "ㄅㄚ", e: "8️⃣" }, { c: "九", z: "ㄐㄧㄡˇ", e: "9️⃣" },
-    { c: "十", z: "ㄕˊ", e: "🔟" }
+    { c: "一", z: "ㄧ", e: "1️⃣", h: "*月", hz: "ㄩㄝˋ" }, { c: "二", z: "ㄦˋ", e: "2️⃣", h: "*月", hz: "ㄩㄝˋ" }, { c: "三", z: "ㄙㄢ", e: "3️⃣", h: "*月", hz: "ㄩㄝˋ" },
+    { c: "四", z: "ㄙˋ", e: "4️⃣", h: "*月", hz: "ㄩㄝˋ" }, { c: "五", z: "ㄨˇ", e: "5️⃣", h: "*月", hz: "ㄩㄝˋ" }, { c: "六", z: "ㄌㄧㄡˋ", e: "6️⃣", h: "*月", hz: "ㄩㄝˋ" },
+    { c: "七", z: "ㄑㄧ", e: "7️⃣", h: "*月", hz: "ㄩㄝˋ" }, { c: "八", z: "ㄅㄚ", e: "8️⃣", h: "*月", hz: "ㄩㄝˋ" }, { c: "九", z: "ㄐㄧㄡˇ", e: "9️⃣", h: "*月", hz: "ㄩㄝˋ" },
+    { c: "十", z: "ㄕˊ", e: "🔟", h: "*月", hz: "ㄩㄝˋ" }
   ] },
   { name: "第二課", words: [
-    { c: "今天", z: "ㄐㄧㄣ ㄊㄧㄢ", e: "📅" }, { c: "昨天", z: "ㄗㄨㄛˊ ㄊㄧㄢ", e: "⏪" },
-    { c: "明天", z: "ㄇㄧㄥˊ ㄊㄧㄢ", e: "⏩" }, { c: "是", z: "ㄕˋ", e: "" },
-    { c: "日", z: "ㄖˋ", e: "☀️" }, { c: "月", z: "ㄩㄝˋ", e: "🌙" },
-    { c: "星期", z: "ㄒㄧㄥ ㄑㄧ", e: "🗓️" }
+    { c: "今天", z: "ㄐㄧㄣ ㄊㄧㄢ", e: "" }, { c: "昨天", z: "ㄗㄨㄛˊ ㄊㄧㄢ", e: "" },
+    { c: "明天", z: "ㄇㄧㄥˊ ㄊㄧㄢ", e: "" }, { c: "是", z: "ㄕˋ", e: "", h: "*的", hz: "˙ㄉㄜ" },
+    { c: "日", z: "ㄖˋ", e: "☀️", h: "*月", hz: "ㄩㄝˋ" }, { c: "月", z: "ㄩㄝˋ", e: "🌙", h: "日*", hz: "ㄖˋ" },
+    { c: "星期", z: "ㄒㄧㄥ ㄑㄧ", e: "" }
   ] },
   { name: "第三課", words: [
-    { c: "市", z: "ㄕˋ", e: "🏪" }, { c: "李子", z: "ㄌㄧˇ ˙ㄗ", e: "" },
-    { c: "多少", z: "ㄉㄨㄛ ㄕㄠˇ", e: "🔢" }, { c: "元", z: "ㄩㄢˊ", e: "💰" },
+    { c: "市", z: "ㄕˋ", e: "", h: "城*", hz: "ㄔㄥˊ" }, { c: "李子", z: "ㄌㄧˇ ˙ㄗ", e: "" },
+    { c: "多少", z: "ㄉㄨㄛ ㄕㄠˇ", e: "" }, { c: "元", z: "ㄩㄢˊ", e: "", h: "一*", hz: "ㄧ" },
     { c: "南瓜", z: "ㄋㄢˊ ㄍㄨㄚ", e: "🎃" }, { c: "梨子", z: "ㄌㄧˊ ˙ㄗ", e: "🍐" },
     { c: "西瓜", z: "ㄒㄧ ㄍㄨㄚ", e: "🍉" }
   ] },
   { name: "第四課", words: [
-    { c: "這", z: "ㄓㄜˋ", e: "👉" }, { c: "馬", z: "ㄇㄚˇ", e: "🐴" }, { c: "那", z: "ㄋㄚˋ", e: "" },
-    { c: "山", z: "ㄕㄢ", e: "⛰️" }, { c: "人", z: "ㄖㄣˊ", e: "🧑" }, { c: "牛", z: "ㄋㄧㄡˊ", e: "🐮" },
-    { c: "木", z: "ㄇㄨˋ", e: "🪵" }, { c: "鳥", z: "ㄋㄧㄠˇ", e: "🐦" }, { c: "水", z: "ㄕㄨㄟˇ", e: "💧" },
-    { c: "魚", z: "ㄩˊ", e: "🐟" }, { c: "田", z: "ㄊㄧㄢˊ", e: "🌾" }
+    { c: "這", z: "ㄓㄜˋ", e: "", h: "*個", hz: "˙ㄍㄜ" }, { c: "馬", z: "ㄇㄚˇ", e: "🐴", h: "木*", hz: "ㄇㄨˋ" },
+    { c: "那", z: "ㄋㄚˋ", e: "", h: "*裡", hz: "ㄌㄧˇ" }, { c: "山", z: "ㄕㄢ", e: "⛰️", h: "高*", hz: "ㄍㄠ" },
+    { c: "人", z: "ㄖㄣˊ", e: "🧑", h: "大*", hz: "ㄉㄚˋ" }, { c: "牛", z: "ㄋㄧㄡˊ", e: "🐮", h: "*奶", hz: "ㄋㄞˇ" },
+    { c: "木", z: "ㄇㄨˋ", e: "🪵", h: "*馬", hz: "ㄇㄚˇ" }, { c: "鳥", z: "ㄋㄧㄠˇ", e: "🐦", h: "小*", hz: "ㄒㄧㄠˇ" },
+    { c: "水", z: "ㄕㄨㄟˇ", e: "💧", h: "*果", hz: "ㄍㄨㄛˇ" }, { c: "魚", z: "ㄩˊ", e: "🐟", h: "金*", hz: "ㄐㄧㄣ" },
+    { c: "田", z: "ㄊㄧㄢˊ", e: "", h: "水*", hz: "ㄕㄨㄟˇ" }
   ] }
 ];
 /* Light-tone dot: stored the textbook way (˙ㄗ) but spelled last, after the syllable (ㄗ then ˙) */
@@ -337,6 +357,7 @@ function home() {
     <button class="big-btn blue" onclick="mathMenu()">🔢 Math</button>
     <button class="big-btn green" onclick="zhMenu()">🇹🇼 Mandarin</button>
     <button class="link-btn" onclick="gate()">🔒 Grown-ups</button>
+    <div class="verline">${VERSION} · ${VERSION_DATE}</div>
   `;
 }
 function shop() {
@@ -573,7 +594,7 @@ function nextLessonNames() {
   return ["第" + zhNum(m + 1) + "課", "第" + zhNum(m + 2) + "課"];
 }
 
-let zmode = "pic";
+let zmode = "char";
 function zhMenu() {
   let voiceNote = "";
   try {
@@ -583,9 +604,8 @@ function zhMenu() {
   app.innerHTML = `${topbar()}
     <h2>🇹🇼 Mandarin</h2>
     <p class="sub">Pick a game</p>
-    <button class="big-btn pink" onclick="zhPick('pic')">🖼️ Spell it<br><small>picture + character</small></button>
-    <button class="big-btn blue" onclick="zhPick('char')">字 Spell from the character<br><small>no picture</small></button>
-    <button class="big-btn green" onclick="zhPick('write')">✍️ Write the character<br><small>trace each stroke with your finger</small></button>
+    <button class="big-btn blue" onclick="zhPick('char')">注音練習</button>
+    <button class="big-btn green" onclick="zhPick('write')">筆劃練習</button>
     ${voiceNote}
   `;
 }
@@ -596,7 +616,6 @@ function zhPick(mode) {
     <h2>哪一課？ Which lesson?</h2>
     ${gs.map((g, i) => `<button class="big-btn ${COLORS[i % 4]}" onclick="zhStart(${i})">${esc(g)}</button>`).join("")}
     <button class="big-btn green" onclick="zhStart(-1)">🌈 綜合練習<br><small>words from every lesson</small></button>
-    ${mode === "write" ? `<p class="note" style="margin-top:18px">Stroke data: Make Me a Hanzi (Arphic Public License) · Hanzi Writer (MIT)</p>` : ""}
   `;
 }
 let zs = {};
@@ -618,14 +637,13 @@ function nextZh() {
   zs.w = w; zs.flat = flat; zs.pos = 0; zs.mistakes = 0; zs.done = false;
   zs.tiles = shuffle(flat.concat(extras)).map((c, idx) => ({ c, idx }));
   curSay = { text: w.c, lang: "zh-TW" };
-  const showPic = zs.mode === "pic";
   const n = Array.from(w.c).length;
   const size = Math.max(40, Math.min(88, Math.floor(300 / n)));
   app.innerHTML = `${topbar("", "zhPick('" + zs.mode + "')", "skipZh()")}
     <div class="progress"><div style="width:${(zs.i / zs.list.length) * 100}%"></div></div>
     <div class="card">
-      ${showPic ? `<div class="picture" id="pic">${esc(w.e || "✨")}</div><div class="hanzi">${esc(w.c)}</div>`
-                : `<div class="hanzi-big" id="pic" style="font-size:${size}px">${esc(w.c)}</div>`}
+      ${w.e ? `<div style="font-size:3rem;line-height:1.1">${esc(w.e)}</div>` : ""}
+      <div class="hanzi-big" id="pic" style="font-size:${size}px">${esc(w.c)}</div>
       <button class="small-btn" onclick="sayCur()">🔊 Hear it</button>
       <div class="slots">${syl.map(s => `<div class="syl">${s.map(() => `<div class="slot"></div>`).join("")}</div>`).join("")}</div>
       <div class="msg" id="msg"></div>
@@ -675,15 +693,15 @@ function startWrite(gi) {
   }
   const all = allZh(), gs = zhGroups();
   const pool = gi < 0 ? all : all.filter(w => w.g === gs[gi]);
-  const seen = {}, items = [];
+  const cand = {};   // each character, with every word it could be asked from (one is picked at random)
   pool.forEach(w => {
     const syl = w.z.split(" ");
     Array.from(w.c).forEach((ch, idx) => {
-      if (!/[㐀-鿿]/.test(ch) || seen[ch]) return;
-      seen[ch] = true;
-      items.push({ ch, idx, word: w, zhuyin: syl[idx] || "" });
+      if (!/[㐀-鿿]/.test(ch)) return;
+      (cand[ch] = cand[ch] || []).push({ ch, idx, word: w, zhuyin: syl[idx] || "" });
     });
   });
+  const items = Object.keys(cand).map(ch => cand[ch][rand(0, cand[ch].length - 1)]);
   if (!items.length) return zhMenu();
   roundPts = 0;
   const size = Math.max(220, Math.min(320, (window.innerWidth || 360) - 64));
@@ -694,14 +712,13 @@ function nextWrite() {
   if (wr.i >= wr.list.length) return finish(wr.correct, wr.list.length, () => startWrite(wr.gi), () => zhPick("write"));
   const it = wr.list[wr.i], w = it.word;
   wr.item = it; wr.peeked = false;
-  const promptRow = Array.from(w.c).map((c, i) =>
-    `<span class="cz"><span class="cz-ch">${i === it.idx ? "□" : esc(c)}</span>${i === it.idx ? zhVert(it.zhuyin) : ""}</span>`).join("");
+  const cellsHtml = buildCells(w, it.idx).map(cellHtml).join("");
   curSay = { text: w.c, lang: "zh-TW" };
   app.innerHTML = `${topbar("", "zhPick('write')", "skipWrite()")}
     <div class="progress"><div style="width:${(wr.i / wr.list.length) * 100}%"></div></div>
     <div class="card">
-      ${w.e ? `<div style="font-size:3.2rem;line-height:1.1">${esc(w.e)}</div>` : ""}
-      <div class="prompt-row">${promptRow}</div>
+      ${w.e ? `<div style="font-size:3rem;line-height:1.1">${esc(w.e)}</div>` : ""}
+      <div class="cells">${cellsHtml}</div>
       <button class="small-btn" onclick="sayCur()">🔊 Hear it</button>
       <div class="writebox" id="wbox" style="width:${wr.size + 6}px;height:${wr.size + 6}px"></div>
       <div class="msg" id="wmsg"></div>
@@ -712,6 +729,23 @@ function nextWrite() {
   mountWriter(true);
   setTimeout(sayCur, 300);
 }
+/* The prompt: a box with the hint character and its 注音, and a dashed empty box (with its 注音) for the character to write. */
+function parseHint(h, hz) {       // "*的" + "˙ㄉㄜ"  ->  characters before / after the blank, each with its 注音; null if it doesn't add up
+  if (typeof h !== "string" || (h.match(/\*/g) || []).length !== 1) return null;
+  const parts = h.split("*").map(x => Array.from(x.replace(/\s/g, "")));
+  const syl = normZ(hz || "").split(" ").filter(Boolean);
+  if (parts[0].length + parts[1].length === 0 || syl.length !== parts[0].length + parts[1].length) return null;
+  return { pre: parts[0].map((c, i) => ({ ch: c, z: syl[i] })), post: parts[1].map((c, i) => ({ ch: c, z: syl[parts[0].length + i] })) };
+}
+function buildCells(w, idx) {
+  const chars = Array.from(w.c), syl = w.z.split(" ");
+  if (chars.length > 1) return chars.map((c, i) => ({ ch: c, z: syl[i] || "", target: i === idx }));   // the other characters are the hints
+  const me = { ch: w.c, z: w.z, target: true }, h = parseHint(w.h, w.hz);
+  return h ? h.pre.concat([me], h.post) : [me];
+}
+const cellHtml = c => c.target
+  ? `<span class="cell empty"><span class="cell-box"></span>${zhVert(c.z)}</span>`
+  : `<span class="cell"><span class="cell-box">${esc(c.ch)}</span>${zhVert(c.z)}</span>`;
 function zhVert(sy) {
   const a = Array.from(sy);
   const dot = a.includes("˙");
@@ -845,7 +879,7 @@ function admin() {
   app.innerHTML = `${topbar("Done")}
   <div class="admin">
     <h2 style="text-align:center">🔒 Grown-ups</h2>
-    <p class="note" style="text-align:center">Everything here is saved on this device and browser only.</p>
+    <p class="note" style="text-align:center">Everything here is saved on this device and browser only.<br>Version ${VERSION} · published ${VERSION_DATE}</p>
 
     <h3>⭐ Stars</h3>
     <div class="card">
@@ -893,11 +927,11 @@ function admin() {
       <label>Which lesson are these words for?</label>
       <select id="zhG">${nextLessonNames().map(g => `<option value="${esc(g)}">${esc(g)} (new lesson)</option>`).concat(zhGroups().map(g => `<option value="${esc(g)}">${esc(g)}</option>`)).join("")}</select>
       <label>Words, one per line</label>
-      <textarea id="zhT" placeholder="學校 | ㄒㄩㄝˊ ㄒㄧㄠˋ | 🏫&#10;老師 | ㄌㄠˇ ㄕ | 👩‍🏫&#10;水 | ㄕㄨㄟˇ"></textarea>
-      <p class="note">Format: characters | 注音 | picture emoji (optional). Put a space between syllables. For a light (neutral) tone, put the dot ˙ before or after the syllable (˙ㄗ or ㄗ˙); either works. The number of characters must match the number of syllables.</p>
+      <textarea id="zhT" placeholder="學校 | ㄒㄩㄝˊ ㄒㄧㄠˋ&#10;老師 | ㄌㄠˇ ㄕ&#10;是 | ㄕˋ | | *的 ㄉㄜ˙&#10;水 | ㄕㄨㄟˇ | 💧 | *果 ㄍㄨㄛˇ"></textarea>
+      <p class="note">Format: characters | 注音 | emoji (optional) | hint (optional). Put a space between syllables. For a light (neutral) tone, put the dot ˙ before or after the syllable (˙ㄗ or ㄗ˙); either works. The number of characters must match the number of syllables. Only add an emoji if it closely matches the word.<br><br><b>Hints (stroke game):</b> words with two or more characters use their other characters as hints automatically. For a one-character word, write the hint as * where the character goes, then the hint character's 注音: <b>*的 ㄉㄜ˙</b> means 是的, and <b>城* ㄔㄥˊ</b> means 城市. Leave it out and she just sees the 注音.</p>
       <button class="tiny-btn" onclick="addZh()">Add words</button>
       ${gnames.map(g => `<div class="grp"><span>${esc(g)}</span><button class="tiny-btn red" onclick="delZhGroup(${grouped[g][0]})">Delete group</button></div>
-        ${grouped[g].map(i => `<div class="zhrow"><span>${esc(S.zhWords[i].e)} ${esc(S.zhWords[i].c)} · ${esc(S.zhWords[i].z)}</span><button class="tiny-btn red" onclick="delZh(${i})">✕</button></div>`).join("")}`).join("")}
+        ${grouped[g].map(i => `<div class="zhrow"><span>${esc(S.zhWords[i].e)} ${esc(S.zhWords[i].c)} · ${esc(S.zhWords[i].z)}${S.zhWords[i].h ? " · " + esc(S.zhWords[i].h) + " " + esc(S.zhWords[i].hz) : ""}</span><button class="tiny-btn red" onclick="delZh(${i})">✕</button></div>`).join("")}`).join("")}
     </div>
 
     <h3>🔤 Add English spelling words</h3>
@@ -914,6 +948,15 @@ function admin() {
       ${S.redeemed.length ? S.redeemed.slice(0, 15).map((r, i) => `<div class="zhrow"><span>${esc(r.e)} ${esc(r.name)} · ${r.cost} ⭐ · ${esc(r.date)}</span><button class="tiny-btn" onclick="giveBack(${i})">Give back</button></div>`).join("") : `<p class="note">Nothing redeemed yet.</p>`}
     </div>
     ` : ""}
+
+    <h3>💾 Backup</h3>
+    <div class="card">
+      <p class="note">Her stars, lessons and settings live only in this browser. Save a backup file now and then, so they can be restored if the browser's data is ever cleared, or moved to another device.</p>
+      <button class="tiny-btn" onclick="downloadBackup()">Save a backup file</button>
+      <label style="margin-top:14px">Restore from a backup file</label>
+      <input type="file" id="bkFile" accept=".json,application/json" onchange="restoreBackup(this)">
+      <div class="note" id="bkmsg"></div>
+    </div>
 
     <h3>Danger zone</h3>
     <div class="card"><button class="tiny-btn red" onclick="resetAll()">Reset everything on this device</button></div>
@@ -959,10 +1002,17 @@ function addZh() {
     const e = parts[2] || "";
     const syl = z ? z.split(" ") : [];
     if (!c || !z || Array.from(c).length !== syl.length) { bad.push(line); return; }
-    S.zhWords.push({ c, z, e, g }); n++;
+    const word = { c, z, e, g };
+    const hintText = (parts[3] || "").trim();
+    if (hintText && Array.from(c).length === 1) {            // hint: "*的 ㄉㄜ˙" = pattern, then the 注音 of the hint character(s)
+      const bits = hintText.split(/\s+/), pat = bits[0], hzz = normZ(bits.slice(1).join(" "));
+      if (!parseHint(pat, hzz)) { bad.push(line); return; }
+      word.h = pat; word.hz = hzz;
+    }
+    S.zhWords.push(word); n++;
   });
   S.lastGroup = g; save();
-  if (bad.length) alert("These lines were not added. Check that the number of characters matches the number of 注音 syllables (separated by spaces):\n\n" + bad.join("\n"));
+  if (bad.length) alert("These lines were not added. Check that the number of characters matches the number of 注音 syllables (separated by spaces), and that a hint looks like *的 ㄉㄜ˙ (one *, then the hint character's 注音):\n\n" + bad.join("\n"));
   refreshAdmin();
 }
 function delZh(i) { S.zhWords.splice(i, 1); save(); refreshAdmin(); }
@@ -991,6 +1041,51 @@ function giveBack(i) {
     S.points += r.cost; S.redeemed.splice(i, 1); save(); refreshAdmin();
   }
 }
+/* ---------- backup and restore ---------- */
+const bkMsg = t => { const m = document.getElementById("bkmsg"); if (m) m.textContent = t; };
+const bkStr = (v, max) => typeof v === "string" ? v.slice(0, max) : "";
+const bkNum = (v, lo, hi, d) => { const n = Number(v); return isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : d; };
+function backupObject() { return { app: "learning-fun", version: VERSION, saved: new Date().toISOString(), data: S }; }
+function sanitizeBackup(o) {      // returns a clean copy of the saved data, or null if this isn't one of our backup files
+  if (!o || o.app !== "learning-fun" || !o.data || typeof o.data !== "object") return null;
+  const d = o.data, out = DEFAULTS(), D = out.settings, st = d.settings && typeof d.settings === "object" ? d.settings : {};
+  out.points = bkNum(d.points, 0, 1000000, 0);
+  if (Array.isArray(d.prizes)) out.prizes = d.prizes.slice(0, 50).map(p => ({ e: bkStr(p && p.e, 8) || "🎁", name: bkStr(p && p.name, 60) || "Prize", cost: bkNum(p && p.cost, 1, 1000000, 10) }));
+  if (Array.isArray(d.redeemed)) out.redeemed = d.redeemed.slice(0, 50).map(r => ({ e: bkStr(r && r.e, 8), name: bkStr(r && r.name, 60), cost: bkNum(r && r.cost, 0, 1000000, 0), date: bkStr(r && r.date, 30) }));
+  out.settings = { ppc: bkNum(st.ppc, 1, 10, D.ppc), bonus: bkNum(st.bonus, 0, 50, D.bonus), perRound: bkNum(st.perRound, 3, 20, D.perRound), writeRound: bkNum(st.writeRound, 2, 15, D.writeRound),
+    carry: st.carry !== false, sound: st.sound !== false, speak: st.speak !== false, writeGuide: st.writeGuide !== false };
+  if (Array.isArray(d.zhWords)) out.zhWords = d.zhWords.slice(0, 2000).map(w => ({ c: bkStr(w && w.c, 20), z: bkStr(w && w.z, 60), e: bkStr(w && w.e, 12), g: bkStr(w && w.g, 30), h: bkStr(w && w.h, 12), hz: bkStr(w && w.hz, 60) }))
+    .filter(w => w.c && w.z && w.g && Array.from(w.c).length === w.z.split(" ").length)
+    .map(w => { if (!w.h || !parseHint(w.h, w.hz)) { delete w.h; delete w.hz; } return w; });
+  if (Array.isArray(d.enWords)) out.enWords = d.enWords.slice(0, 2000).map(w => ({ w: bkStr(w && w.w, 8).toLowerCase(), e: bkStr(w && w.e, 12) })).filter(w => /^[a-z]{2,8}$/.test(w.w));
+  out.lastGroup = bkStr(d.lastGroup, 30);
+  return out;
+}
+function downloadBackup() {
+  try {
+    const blob = new Blob([JSON.stringify(backupObject(), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob), a = document.createElement("a"), t = new Date(), p2 = n => String(n).padStart(2, "0");
+    a.href = url; a.download = `learning-fun-backup-${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    bkMsg("✅ Backup saved. Look for the file in your Downloads.");
+  } catch (e) { bkMsg("Sorry, this browser couldn't save the backup file."); }
+}
+function restoreBackup(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let data = null;
+    try { data = sanitizeBackup(JSON.parse(r.result)); } catch (e) {}
+    if (!data) { bkMsg("That doesn't look like a Learning Fun backup file."); input.value = ""; return; }
+    if (confirm(`Replace everything on this device with this backup?\n\n⭐ ${data.points} stars · ${data.zhWords.length} added Mandarin words · ${data.enWords.length} added English words`)) {
+      S = data; save(); admin(); bkMsg("✅ Backup restored.");
+    } else { input.value = ""; }
+  };
+  r.onerror = () => bkMsg("Couldn't read that file.");
+  r.readAsText(f);
+}
+
 function resetAll() {
   if (confirm("Erase all points, prizes, added words and settings on this device?")) { S = DEFAULTS(); save(); home(); }
 }
